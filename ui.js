@@ -49,8 +49,8 @@ function render() {
 let _toastT;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(_toastT); _toastT = setTimeout(() => t.classList.remove('on'), 2200); }
 function openSheet(title, body, mount) {
-  $('#sheetBody').innerHTML = `<div class="sheet-inner"><div class="grab"></div><div class="sh"><h2 class="h2">${esc(title)}</h2>
-    <button class="x" data-act="closeSheet" aria-label="Close">${IC.x}</button></div><div class="stack">${body}</div></div>`;
+  $('#sheetBody').innerHTML = `<div class="sheet-inner"><div class="grab-zone"><div class="grab"></div><div class="sh"><h2 class="h2" id="sheetTitle">${esc(title)}</h2></div></div><div class="stack">${body}</div></div>`;
+  $('#sheet').setAttribute('aria-labelledby', 'sheetTitle');
   $('#scrim').classList.add('open'); $('#sheet').classList.add('open'); $('#sheet').scrollTop = 0;
   if (mount) mount($('#sheet'));
 }
@@ -392,12 +392,12 @@ function editDocs(vid) {
 /* ============================================================
    PROJECTS
    ============================================================ */
-const phasesOf = vid => [...new Set(projOf(vid).map(p => p.phase).filter(Boolean))].sort();
+
 function projCard(p, group) {
   const parts = p.parts || [], tasks = p.tasks || [];
   const ph = parts.filter(x => x.have).length, td = tasks.filter(t => t.done).length;
   const cost = parts.reduce((a, x) => a + (x.cost || 0), 0);
-  const tags = [p.category, group === 'phase' ? p.status : p.phase, p.watch ? 'Watch item' : ''].filter(Boolean);
+  const tags = [p.category, group === 'phase' ? p.status : (normPhase(p.phase) ? phaseLabel(normPhase(p.phase)) : ''), p.watch ? 'Watch item' : ''].filter(Boolean);
   return `<button class="pcard ${p.priority === 'High' && p.status !== 'Done' ? 'hot' : ''}" data-act="editProject" data-id="${p.id}">
     <div class="top"><div class="ttl">${esc(p.title)}</div>${p.priority && p.priority !== 'Normal' ? `<span class="pri ${p.priority}">${p.priority.toUpperCase()}</span>` : ''}</div>
     <div class="chips" style="gap:6px">${tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
@@ -411,8 +411,7 @@ function renderProjects(vid) {
   const remaining = open.reduce((a, p) => a + (p.parts || []).filter(x => !x.have).reduce((b, x) => b + (x.cost || 0), 0), 0);
   let groups;
   if (UI.projGroup === 'phase') {
-    const ph = phasesOf(vid);
-    groups = [...ph, ''].map((g, i) => ({name: g || 'No phase', color: PHASE_COLORS[i % PHASE_COLORS.length], items: shown.filter(p => (p.phase || '') === g)}));
+    groups = [...PHASES, null].map((n, i) => ({name: phaseLabel(n), color: PHASE_COLORS[i], always: n != null, items: shown.filter(p => normPhase(p.phase) === n)}));   // normPhase: any stray value lands in a group, never vanishes
   } else groups = STATUSES.filter(s => s !== 'Done').map(s => ({name: s, color: STATUS_COLOR[s], items: shown.filter(p => p.status === s)}));
   const byOrder = (a, b) => (a.priority === 'High' ? -1 : 0) - (b.priority === 'High' ? -1 : 0) || (a.order ?? 0) - (b.order ?? 0);
   return `<div style="display:flex;justify-content:space-between;align-items:center">
@@ -422,22 +421,21 @@ function renderProjects(vid) {
     <div class="seg" style="grid-template-columns:repeat(2,minmax(0,1fr))" role="group" aria-label="Group by">
       <button class="${UI.projGroup === 'phase' ? 'on' : ''}" data-act="projGroup" data-k="phase">By phase</button><button class="${UI.projGroup === 'status' ? 'on' : ''}" data-act="projGroup" data-k="status">By status</button></div>
     ${cats.length > 1 ? `<div class="pills" role="group" aria-label="Filter by category">${['All', ...cats].map(c => `<button class="pill sm ${UI.projCat === c ? 'on' : ''}" data-act="projCat" data-k="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
-    ${groups.filter(g => g.items.length).map(g => `<section style="display:flex;flex-direction:column;gap:10px"><h2 class="grp"><span class="dot" style="background:${g.color}"></span>${esc(g.name)} <span class="n">${g.items.length}</span></h2>
-      ${g.items.sort(byOrder).map(p => projCard(p, UI.projGroup)).join('')}</section>`).join('') || '<div class="empty">No open projects.</div>'}
+    ${groups.filter(g => g.items.length || g.always).map(g => `<section style="display:flex;flex-direction:column;gap:10px"><h2 class="grp"><span class="dot" style="background:${g.color}"></span>${esc(g.name)} <span class="n">${g.items.length}</span></h2>
+      ${g.items.length ? g.items.sort(byOrder).map(p => projCard(p, UI.projGroup)).join('') : `<div class="help faint" style="padding:0 2px 4px">Nothing here${UI.projCat !== 'All' ? ' in ' + esc(UI.projCat) : ''}.</div>`}</section>`).join('') || '<div class="empty">No open projects.</div>'}
     <button class="btn2" data-act="toggleDone" style="display:flex;justify-content:space-between;align-items:center;font-family:var(--cond);font-weight:600;letter-spacing:.1em;color:var(--ink-dim)">
       DONE · ${done.length}<span style="font-family:var(--sans);letter-spacing:0;font-size:13px">${UI.showDone ? 'Hide' : 'Show'}</span></button>
     ${UI.showDone ? done.sort((a, b) => (b.doneAt || '').localeCompare(a.doneAt || '')).map(p => projCard(p, 'phase')).join('') : ''}`;
 }
 let PDRAFT = null;
 function editProject(id, vid) {
-  const p = id ? DATA.projects.find(x => x.id === id) : {vid, title: '', category: 'Repair', phase: '', status: 'To Do', priority: 'Normal', notes: '', parts: [], tasks: [], watch: false};
+  const p = id ? DATA.projects.find(x => x.id === id) : {vid, title: '', category: 'Repair', phase: null, status: 'To Do', priority: 'Normal', notes: '', parts: [], tasks: [], watch: false};
   PDRAFT = JSON.parse(JSON.stringify(p));
-  const phases = phasesOf(p.vid);
   openSheet(id ? 'Project' : 'New project', `
     <div class="field"><label class="lbl" for="jTitle">Title</label><input id="jTitle" class="fld txt" value="${esc(p.title)}"></div>
     <div class="g2"><div class="field"><label class="lbl" for="jCat">Category</label><select id="jCat" class="fld">${[...new Set([...CATEGORIES, p.category].filter(Boolean))].map(c => `<option ${p.category === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
       <div class="field"><label class="lbl" for="jStatus">Status</label><select id="jStatus" class="fld">${STATUSES.map(s => `<option ${p.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div></div>
-    <div class="g2"><div class="field"><label class="lbl" for="jPhase">Phase</label><input id="jPhase" class="fld txt" list="phaseList" value="${esc(p.phase)}" placeholder="e.g. 1 - Now"><datalist id="phaseList">${phases.map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>
+    <div class="g2"><div class="field"><label class="lbl" for="jPhase">Phase</label><select id="jPhase" class="fld"><option value="" ${!p.phase ? 'selected' : ''}>No phase</option>${PHASES.map(n => `<option value="${n}" ${p.phase === n ? 'selected' : ''}>Phase ${n}</option>`).join('')}</select></div>
       <div class="field"><label class="lbl" for="jPri">Priority</label><select id="jPri" class="fld">${['High', 'Normal', 'Low'].map(x => `<option ${p.priority === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div></div>
     <div class="switchrow"><div>Watch item<span class="s">Shows on the Log page until done; notes can attach to it</span></div><button class="switch" role="switch" id="jWatch" aria-checked="${!!p.watch}" aria-label="Watch item" data-act="flip"></button></div>
     <div class="field"><label class="lbl" for="jNotes">Notes</label><textarea id="jNotes" class="fld">${esc(p.notes)}</textarea></div>
@@ -469,7 +467,7 @@ function paintPDraft() {
 }
 function collectProject() {
   const sh = $('#sheet');
-  Object.assign(PDRAFT, {title: sv('#jTitle'), category: sv('#jCat'), status: sv('#jStatus'), phase: sv('#jPhase'), priority: sv('#jPri'), notes: sv('#jNotes'),
+  Object.assign(PDRAFT, {title: sv('#jTitle'), category: sv('#jCat'), status: sv('#jStatus'), phase: normPhase(sv('#jPhase')), priority: sv('#jPri'), notes: sv('#jNotes'),
     watch: $('#jWatch', sh).getAttribute('aria-checked') === 'true'});
   PDRAFT.parts = PDRAFT.parts.filter(x => (x.name || '').trim()); PDRAFT.tasks = PDRAFT.tasks.filter(t => (t.t || '').trim());
   return PDRAFT;
@@ -647,11 +645,54 @@ function importJSON() {
       if (!d.vehicles) throw new Error('bad');
       if (DATA.vehicles.length && !confirm('Replace all data on this device with the file?')) return;
       if (d.photos) { PHOTOS = d.photos; SYNC.photoDirty = Object.keys(PHOTOS); await savePhotos(); }
-      delete d.photos; DATA = Object.assign(EMPTY(), d); save(); closeSheet(); go('#/'); toast('Imported');
+      delete d.photos; DATA = Object.assign(EMPTY(), d); normalizeData(); save(); closeSheet(); go('#/'); toast('Imported');
     } catch (e) { toast('That file isn’t a Garage backup'); }
   };
   inp.click();
 }
+
+function flashCard(id) {
+  const el = $(`.pcard[data-id="${id}"]`); if (!el) return;
+  el.scrollIntoView({block: 'center', behavior: 'smooth'}); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600);
+}
+
+/* ---------- sheet: pull down to dismiss ---------- */
+(function sheetDrag() {
+  const sh = $('#sheet'), scrim = $('#scrim');
+  let y0 = null, dy = 0, dragging = false, samples = [];
+  sh.addEventListener('touchstart', e => {
+    if (!sh.classList.contains('open') || e.touches.length > 1) { y0 = null; return; }
+    const onHandle = !!e.target.closest('.grab-zone');
+    // From the body, only start a pull when the sheet is scrolled to the top and the finger isn't in a text box.
+    if (!onHandle && (sh.scrollTop > 0 || e.target.closest('textarea, select'))) { y0 = null; return; }
+    y0 = e.touches[0].clientY; dy = 0; dragging = false; samples = [];
+  }, {passive: true});
+  sh.addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    const d = e.touches[0].clientY - y0;
+    if (!dragging) {
+      if (d > 8) { dragging = true; sh.style.transition = 'none'; scrim.style.transition = 'none'; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+      else if (d < -8) { y0 = null; return; }      // upward: let the sheet scroll normally
+      else return;
+    }
+    e.preventDefault();
+    dy = Math.max(0, d - 8);
+    const now = performance.now(); samples.push([now, dy]); while (samples.length > 2 && now - samples[0][0] > 120) samples.shift();
+    sh.style.transform = `translateY(${dy}px)`;
+    scrim.style.opacity = String(Math.max(0, 1 - dy / (sh.offsetHeight * 0.9)));
+  }, {passive: false});
+  const end = () => {
+    if (y0 == null) return; y0 = null;
+    if (!dragging) return; dragging = false;
+    // release velocity over the last ~120 ms (a flick after a pause still counts)
+    const s0 = samples[0], v = s0 ? (dy - s0[1]) / Math.max(16, performance.now() - s0[0]) : 0;   // px per ms
+    sh.style.transition = ''; scrim.style.transition = ''; scrim.style.opacity = '';
+    if (dy > Math.min(140, sh.offsetHeight * 0.25) || (v > 0.45 && dy > 24)) closeSheet();
+    sh.style.transform = '';                                 // animates to closed (class) or back open
+  };
+  sh.addEventListener('touchend', end); sh.addEventListener('touchcancel', end);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && sh.classList.contains('open')) closeSheet(); });
+})();
 
 /* ============================================================
    ACTIONS (event delegation)
@@ -690,7 +731,10 @@ const ACT = {
   // projects
   projGroup: d => { UI.projGroup = d.k; render(); }, projCat: d => { UI.projCat = d.k; render(); }, toggleDone: () => { UI.showDone = !UI.showDone; render(); },
   editProject: d => editProject(d.id, d.vid || ROUTE.vid),
-  saveProject: d => { if (saveProject(d.id)) { closeSheet(); render(); toast('Saved'); } },
+  saveProject: d => { const p = saveProject(d.id); if (!p) return; closeSheet();
+    if (p.status !== 'Done' && UI.projCat !== 'All' && p.category !== UI.projCat) UI.projCat = 'All';   // never hide what was just saved
+    if (p.status === 'Done') UI.showDone = true;
+    render(); flashCard(p.id); toast('Saved'); },
   finishProject: d => finishProject(d.id),
   delProject: d => { if (!confirm('Delete this project?')) return; DATA.projects = DATA.projects.filter(x => x.id !== d.id); DATA.logs.forEach(l => { if (l.projectId === d.id) l.projectId = null; }); save(); closeSheet(); render(); },
   pAddPart: () => { collectProject(); PDRAFT.parts.push({name: '', cost: null, have: false, date: null}); paintPDraft(); const ins = $$('[data-pp=name]'); ins[ins.length - 1].focus(); },

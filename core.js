@@ -2,7 +2,7 @@
 /* ============================================================
    THE GARAGE — core: utils, storage, calculations, sync, snapshot
    ============================================================ */
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 
 /* ---------- utils ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -64,7 +64,7 @@ async function idbPut(k, v) {
 }
 async function load() {
   try {
-    const d = await idbGet('data'); if (d && d.vehicles) DATA = Object.assign(EMPTY(), d);
+    const d = await idbGet('data'); if (d && d.vehicles) { DATA = Object.assign(EMPTY(), d); if (normalizeData()) save(); }
     PHOTOS = (await idbGet('photos')) || {};
     const s = await idbGet('sync'); if (s) SYNC = Object.assign(SYNC, s);
   } catch (e) { console.warn('load failed', e); }
@@ -80,6 +80,20 @@ function save(opts = {}) {
 }
 const saveSync = () => idbPut('sync', SYNC).catch(() => {});
 const savePhotos = () => idbPut('photos', PHOTOS).catch(() => {});
+
+/* ---------- phases: strict 1–5 (or none) ---------- */
+const PHASES = [1, 2, 3, 4, 5];
+function normPhase(v) {
+  if (v == null || v === '') return null;
+  const n = typeof v === 'number' ? v : parseInt(String(v).trim().match(/^\D*(\d)/)?.[1], 10);
+  return PHASES.includes(n) ? n : null;
+}
+const phaseLabel = n => n ? `Phase ${n}` : 'No phase';
+function normalizeData() {                 // returns true if anything changed (older data stored free-text phases)
+  let changed = false;
+  for (const p of DATA.projects) { const n = normPhase(p.phase); if (n !== p.phase) { p.phase = n; changed = true; } }
+  return changed;
+}
 
 /* ---------- lookups ---------- */
 const V = id => DATA.vehicles.find(v => v.id === id);
@@ -342,11 +356,12 @@ const Cloud = (() => {
     const d = JSON.parse(b64dec(f.b64));
     if (!d.vehicles) throw new Error('Not a Garage data file');
     DATA = Object.assign(EMPTY(), d);
+    const migrated = normalizeData();
     await getFile(SNAP_FILE).catch(() => null);
     for (const v of DATA.vehicles) {
       try { const p = await getFile(`photos/${v.id}.jpg`); if (p) PHOTOS[v.id] = 'data:image/jpeg;base64,' + p.b64.replace(/\s/g, ''); } catch (e) {}
     }
-    SYNC.dirty = false; SYNC.photoDirty = []; SYNC.lastSync = Date.now();
+    SYNC.dirty = migrated; SYNC.photoDirty = []; SYNC.lastSync = Date.now();
     await idbPut('data', DATA); await savePhotos(); await saveSync(); setSyncState('synced');
   }
   // Inbox: changes Claude (or anything else) queues in inbox.json. Applied here, then the file is emptied.
@@ -364,6 +379,7 @@ const Cloud = (() => {
         ok: res.ok, skipped: res.skipped}, ...(DATA.patchLog || [])].slice(0, 30);
       applied++;
     }
+    if (applied) normalizeData();
     if (applied) { DATA.updatedAt = new Date().toISOString(); SYNC.dirty = true; await idbPut('data', DATA); }
     if ((box.patches || []).length) {          // empty the inbox (patch ids are remembered, so a failed clear can't double-apply)
       try { await putFile(INBOX_FILE, b64enc(JSON.stringify({patches: []}, null, 2) + '\n'), 'Inbox applied by app'); } catch (e) { console.warn('inbox clear failed', e); }
@@ -491,13 +507,13 @@ function buildSnapshot() {
           (l.projectId && DATA.projects.find(p => p.id === l.projectId) ? ` (re: ${DATA.projects.find(p => p.id === l.projectId).title})` : ''));
       });
     }
-    const open = projOf(v.id).filter(p => p.status !== 'Done').sort((a, b) => (a.phase || '').localeCompare(b.phase || '') || (a.order ?? 0) - (b.order ?? 0));
+    const open = projOf(v.id).filter(p => p.status !== 'Done').sort((a, b) => (a.phase || 9) - (b.phase || 9) || (a.order ?? 0) - (b.order ?? 0));
     if (open.length) {
       L.push(``, `**Open projects** (${open.length})`, ``);
       open.forEach(p => {
         const parts = (p.parts || []).map(x => `${x.have ? '✓' : '○'} ${x.name}${x.cost ? ' ' + money(x.cost) : ''}`).join(', ');
         const tasks = (p.tasks || []).map(t => `${t.done ? '✓' : '○'} ${t.t}`).join(', ');
-        L.push(`- [${p.status}] ${p.title} — ${p.category || ''}${p.phase ? ' · ' + p.phase : ''}${p.priority && p.priority !== 'Normal' ? ' · ' + p.priority + ' priority' : ''}${p.notes ? ' — ' + p.notes : ''}${parts ? ' · parts: ' + parts : ''}${tasks ? ' · tasks: ' + tasks : ''}`);
+        L.push(`- [${p.status}] ${p.title} — ${p.category || ''}${p.phase ? ' · ' + phaseLabel(p.phase) : ''}${p.priority && p.priority !== 'Normal' ? ' · ' + p.priority + ' priority' : ''}${p.notes ? ' — ' + p.notes : ''}${parts ? ' · parts: ' + parts : ''}${tasks ? ' · tasks: ' + tasks : ''}`);
       });
     }
     const done = projOf(v.id).filter(p => p.status === 'Done');
