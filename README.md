@@ -22,8 +22,9 @@ Data lives on the phone (IndexedDB). It also syncs to a **separate private repo*
 | `garage-data.json` | Full data: vehicles, logs, schedule, services, projects |
 | `snapshot.md` | A readable summary, regenerated on every sync, so Claude can pick up Roci context |
 | `photos/<vehicle-id>.jpg` | The hero photo for each vehicle (resized to about 250 KB) |
+| `inbox.json` | Changes Claude queues, e.g. specs from the service manual. The app applies them, logs them under Settings → Updates from Claude, and empties the file. |
 
-Sync runs about 2.5 s after each change. If you're offline, changes are queued. On launch, the app pulls from the repo if another device changed it. If both changed, the most recent push wins.
+Sync runs about 2.5 s after each change. If you're offline, changes are queued. On launch and whenever the app comes back to the foreground, it pulls changes from other devices and applies the inbox. If both changed, the most recent push wins.
 
 **This app repo holds no personal data.** It stays public so GitHub Pages can host it for free.
 

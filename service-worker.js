@@ -1,6 +1,6 @@
 /* The Garage service worker — offline app shell.
    Bump CACHE whenever any app file changes so phones pick up the update. */
-const CACHE = 'garage-v2';
+const CACHE = 'garage-v3';
 const ASSETS = ['./', './index.html', './styles.css', './core.js', './ui.js', './manifest.json',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'];
 

@@ -2,7 +2,7 @@
 /* ============================================================
    THE GARAGE — core: utils, storage, calculations, sync, snapshot
    ============================================================ */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 
 /* ---------- utils ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -264,7 +264,7 @@ function restingSync() { setSyncState(!Cloud.connected() ? 'local' : (!navigator
    garage-data.json (full data) · snapshot.md (Claude context) · photos/<vid>.jpg
    Fine-grained PAT, Contents read/write on that one repo. Last-write-wins.
    ============================================================ */
-const DATA_FILE = 'garage-data.json', SNAP_FILE = 'snapshot.md';
+const DATA_FILE = 'garage-data.json', SNAP_FILE = 'snapshot.md', INBOX_FILE = 'inbox.json';
 const Cloud = (() => {
   let pushing = false, timer = null;
   const base = () => `https://api.github.com/repos/${SYNC.owner}/${SYNC.repo}`;
@@ -349,20 +349,98 @@ const Cloud = (() => {
     SYNC.dirty = false; SYNC.photoDirty = []; SYNC.lastSync = Date.now();
     await idbPut('data', DATA); await savePhotos(); await saveSync(); setSyncState('synced');
   }
-  // On launch: push local changes, or pull if another device changed the repo.
+  // Inbox: changes Claude (or anything else) queues in inbox.json. Applied here, then the file is emptied.
+  // Never conflicts with garage-data.json, because nothing but this app writes that file.
+  async function applyInbox() {
+    const f = await getFile(INBOX_FILE);
+    if (!f) return 0;
+    let box; try { box = JSON.parse(b64dec(f.b64)); } catch (e) { console.warn('inbox unreadable', e); return 0; }
+    const pending = (box.patches || []).filter(p => p && p.id && !(DATA.appliedPatches || []).includes(p.id));
+    let applied = 0;
+    for (const p of pending) {
+      const res = applyPatch(p);
+      DATA.appliedPatches = [...(DATA.appliedPatches || []), p.id].slice(-200);
+      DATA.patchLog = [{id: p.id, note: p.note || '', by: p.by || 'claude', at: p.at || null, appliedAt: new Date().toISOString(),
+        ok: res.ok, skipped: res.skipped}, ...(DATA.patchLog || [])].slice(0, 30);
+      applied++;
+    }
+    if (applied) { DATA.updatedAt = new Date().toISOString(); SYNC.dirty = true; await idbPut('data', DATA); }
+    if ((box.patches || []).length) {          // empty the inbox (patch ids are remembered, so a failed clear can't double-apply)
+      try { await putFile(INBOX_FILE, b64enc(JSON.stringify({patches: []}, null, 2) + '\n'), 'Inbox applied by app'); } catch (e) { console.warn('inbox clear failed', e); }
+    }
+    return applied;
+  }
+  // On launch and whenever the app returns to the foreground: pull other devices' changes,
+  // apply the inbox, then push anything local.
+  let reconciling = false;
   async function reconcile() {
     if (!connected() || !navigator.onLine) { restingSync(); return false; }
-    if (SYNC.dirty) { await push(); return false; }
+    if (reconciling || pushing) return false;
+    reconciling = true; let changed = false;
     try {
-      const known = SYNC.shas[DATA_FILE];
-      const meta = await api(`/contents/${DATA_FILE}?ref=${encodeURIComponent(SYNC.branch)}`);
-      if (meta && meta.sha !== known) { await pull(); return true; }
-      restingSync();
-    } catch (e) { setSyncState('err'); }
-    return false;
+      if (!SYNC.dirty) {
+        const meta = await api(`/contents/${DATA_FILE}?ref=${encodeURIComponent(SYNC.branch)}`);
+        if (meta && meta.sha !== SYNC.shas[DATA_FILE]) { await pull(); changed = true; }
+      }
+      const n = await applyInbox();
+      if (n) { changed = true; LAST_INBOX = n; }
+      if (SYNC.dirty) await push(); else restingSync();
+    } catch (e) { console.warn(e); setSyncState('err'); }
+    finally { reconciling = false; }
+    return changed;
   }
   return {connected, connect, disconnect, schedulePush, push, pull, reconcile};
 })();
+let LAST_INBOX = 0;
+
+/* ---------- inbox patch ops ---------- */
+const PATCH_COLLS = ['logs', 'schedule', 'services', 'projects'];
+const VEHICLE_FIELDS = ['nickname', 'year', 'make', 'model', 'trim', 'body', 'transmission', 'plate', 'vin', 'status', 'purchaseDate', 'purchaseMi', 'order'];
+function applyPatch(p) {
+  let ok = 0; const skipped = [];
+  for (const op of (p.ops || [])) {
+    try {
+      const v = op.vid ? V(op.vid) : null;
+      switch (op.op) {
+        case 'setSpec': {
+          if (!v || !op.key) throw 'vehicle/key';
+          v.specs = v.specs || [];
+          const i = v.specs.findIndex(s => s[0].toLowerCase() === String(op.key).toLowerCase());
+          const row = [String(op.key), String(op.value ?? '')]; if (op.source) row.push(String(op.source));
+          if (i >= 0) v.specs[i] = row; else v.specs.push(row);
+          break;
+        }
+        case 'delSpec': {
+          if (!v) throw 'vehicle';
+          v.specs = (v.specs || []).filter(s => s[0].toLowerCase() !== String(op.key).toLowerCase());
+          break;
+        }
+        case 'updateVehicle': {
+          if (!v) throw 'vehicle';
+          for (const [k, val] of Object.entries(op.fields || {})) if (VEHICLE_FIELDS.includes(k)) v[k] = val;
+          if (op.docs) v.docs = Object.assign({}, v.docs || {}, op.docs);
+          break;
+        }
+        case 'upsert': {
+          if (!PATCH_COLLS.includes(op.coll) || !op.item || !op.item.id) throw 'coll/item.id';
+          const arr = DATA[op.coll], cur = arr.find(x => x.id === op.item.id);
+          if (cur) Object.assign(cur, op.item);
+          else { if (!V(op.item.vid)) throw 'item.vid'; arr.push(op.item); }
+          break;
+        }
+        case 'delete': {
+          if (!PATCH_COLLS.includes(op.coll)) throw 'coll';
+          DATA[op.coll] = DATA[op.coll].filter(x => x.id !== op.id);
+          break;
+        }
+        case 'settings': Object.assign(DATA.settings, op.fields || {}); break;
+        default: throw 'unknown op';
+      }
+      ok++;
+    } catch (e) { skipped.push(`${op.op || '?'} (${e})`); }
+  }
+  return {ok, skipped};
+}
 window.addEventListener('online', () => { if (Cloud.connected() && SYNC.dirty) Cloud.push(); else restingSync(); });
 window.addEventListener('offline', restingSync);
 
@@ -384,7 +462,7 @@ function buildSnapshot() {
       d.registrationExpires && `registration expires ${fmtDate(d.registrationExpires, true)}`, d.title && `title ${d.title}`].filter(Boolean).join(' · ');
     if (docLine) L.push(`- Docs: ${docLine}`);
     const specs = (v.specs || []).filter(s => s[1]);
-    if (specs.length) { L.push(``, `**Specs**`, ``); specs.forEach(s => L.push(`- ${s[0]}: ${s[1]}`)); }
+    if (specs.length) { L.push(``, `**Specs**`, ``); specs.forEach(s => L.push(`- ${s[0]}: ${s[1]}${s[2] ? ` _(${s[2]})_` : ''}`)); }
     const watches = projOf(v.id).filter(p => p.watch && p.status !== 'Done');
     const crit = m.items.filter(x => x.st.state === 'overdue' || x.st.state === 'soon');
     if (watches.length || crit.length || m.docs.some(x => x.state !== 'ok')) {

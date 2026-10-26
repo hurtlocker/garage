@@ -291,9 +291,9 @@ function mxHistory(vid) {
       <div class="s">${x.odo != null ? fmtMi(x.odo) + ' mi' : '— mi'}${x.doneBy ? ' · ' + esc(x.doneBy) : ''}${x.type ? ' · ' + esc(x.type) : ''}</div>${x.notes ? `<div class="n">${esc(x.notes)}</div>` : ''}</div></button>`; }).join('')
       : '<div class="empty">No service records yet.</div>'}`;
 }
-function kv(k, v, act, data = '', copy) {
+function kv(k, v, act, data = '', copy, src) {
   return `<div class="kvrow" style="padding-right:${copy ? 6 : 14}px"><button data-act="${act}" ${data} style="display:flex;justify-content:space-between;gap:12px;flex:1;min-width:0;text-align:left;min-height:28px;align-items:center">
-    <span class="k">${esc(k)}</span><span class="v mono ${v ? '' : 'unset'}" style="${v ? '' : 'font-family:var(--sans)'}">${v ? esc(v) : 'Not set'}</span></button>
+    <span class="k">${esc(k)}</span><span class="v mono ${v ? '' : 'unset'}" style="${v ? '' : 'font-family:var(--sans)'}">${v ? esc(v) : 'Not set'}${src ? `<span class="faint" style="display:block;font-family:var(--sans);font-size:11px">${esc(src)}</span>` : ''}</span></button>
     ${copy && v ? `<button class="x" data-act="copy" data-v="${esc(v)}" aria-label="Copy ${esc(k)}">${IC.copy}</button>` : ''}</div>`;
 }
 function mxSpecs(vid) {
@@ -304,7 +304,7 @@ function mxSpecs(vid) {
       ${kv('Plate', v.plate, 'editVehicle', `data-vid="${vid}"`, true)}${kv('VIN', v.vin, 'editVehicle', `data-vid="${vid}"`, true)}
       ${kv('Purchased', v.purchaseDate || v.purchaseMi ? `${v.purchaseDate ? fmtDate(v.purchaseDate, true) : ''}${v.purchaseMi ? ' · ' + fmtMi(v.purchaseMi) + ' mi' : ''}` : '', 'editVehicle', `data-vid="${vid}"`)}</div>
     <div style="display:flex;justify-content:space-between;align-items:center"><h2 class="h2">Specs &amp; reference</h2><button class="btn2 sm" data-act="editSpec" data-vid="${vid}" data-i="-1">+ Spec</button></div>
-    <div class="list">${(v.specs || []).map((s, i) => kv(s[0], s[1], 'editSpec', `data-vid="${vid}" data-i="${i}"`)).join('') || '<div class="kvrow"><span class="k">No specs yet</span></div>'}</div>
+    <div class="list">${(v.specs || []).map((s, i) => kv(s[0], s[1], 'editSpec', `data-vid="${vid}" data-i="${i}"`, false, s[2])).join('') || '<div class="kvrow"><span class="k">No specs yet</span></div>'}</div>
     <div style="display:flex;justify-content:space-between;align-items:center"><h2 class="h2">Documents</h2><button class="btn2 sm" data-act="editDocs" data-vid="${vid}">Edit</button></div>
     <div class="list">${kv('Insurer', d.insurer, 'editDocs', `data-vid="${vid}"`)}${kv('Policy number', d.policy, 'editDocs', `data-vid="${vid}"`, true)}
       ${kv('Insurance renews', d.insuranceRenews ? fmtDate(d.insuranceRenews, true) : '', 'editDocs', `data-vid="${vid}"`)}
@@ -373,6 +373,7 @@ function editSpec(vid, i) {
   openSheet(i >= 0 ? 'Edit spec' : 'New spec', `
     <div class="field"><label class="lbl" for="pK">Label</label><input id="pK" class="fld txt" value="${esc(s[0])}" placeholder="e.g. Tire size"></div>
     <div class="field"><label class="lbl" for="pV">Value</label><input id="pV" class="fld txt" value="${esc(s[1])}" placeholder="e.g. 205/55R16 · 32 psi"></div>
+    <div class="field"><label class="lbl" for="pS">Source</label><input id="pS" class="fld txt" value="${esc(s[2] || '')}" placeholder="Optional — e.g. FSM p. 2-14"></div>
     <button class="btn" data-act="saveSpec" data-vid="${vid}" data-i="${i}">SAVE</button>
     ${i >= 0 ? `<button class="btn2 danger" data-act="delSpec" data-vid="${vid}" data-i="${i}">Delete spec</button>` : ''}`, sh => $('#pV', sh).focus());
 }
@@ -602,6 +603,8 @@ function openSettings() {
         <div class="kvrow"><span class="k">Status</span><span class="v" style="display:flex;gap:8px;align-items:center"><span class="sync-dot"></span><span class="sync-txt"></span></span></div></div>
       <div class="g2"><button class="btn2" data-act="syncNow">Sync now</button><button class="btn2" data-act="pullNow">Pull from repo</button></div>
       <button class="btn2" data-act="copySnap">Copy Claude snapshot</button>
+      ${(DATA.patchLog || []).length ? `<div class="lbl" style="margin-top:4px">Updates from Claude</div><div class="list">${DATA.patchLog.slice(0, 8).map(x => `<div class="kvrow" style="flex-direction:column;align-items:flex-start;gap:2px">
+        <span style="font-size:14px">${esc(x.note || 'Update')}</span><span class="mono faint" style="font-size:12px">${x.appliedAt ? fmtDate(x.appliedAt.slice(0, 10), true) : ''} · ${x.ok} change${x.ok === 1 ? '' : 's'}${x.skipped && x.skipped.length ? ` · ${x.skipped.length} skipped` : ''}</span></div>`).join('')}</div>` : ''}
       <button class="btn2 danger" data-act="disconnect">Disconnect</button>`
     : `<p class="help">Backs up everything to <code>garage-data.json</code> in a private repo, plus <code>snapshot.md</code> (a readable summary Claude can use) and your vehicle photos.
         Create a <b>fine-grained</b> token with access to <b>only that repo</b> and <b>Contents: Read and write</b>. The token stays on this device.</p>
@@ -680,7 +683,7 @@ const ACT = {
   addService: d => editService(null, d.vid, d.sched), editService: d => editService(d.id), saveService: d => saveService(d.id, d.vid),
   delService: d => { if (!confirm('Delete this record?')) return; DATA.services = DATA.services.filter(x => x.id !== d.id); save(); closeSheet(); render(); },
   editSpec: d => editSpec(d.vid, +d.i),
-  saveSpec: d => { const v = V(d.vid), k = sv('#pK'), val = sv('#pV'); if (!k) { toast('Add a label'); return; } v.specs = v.specs || []; if (+d.i >= 0) v.specs[+d.i] = [k, val]; else v.specs.push([k, val]); save(); closeSheet(); render(); },
+  saveSpec: d => { const v = V(d.vid), k = sv('#pK'), val = sv('#pV'); if (!k) { toast('Add a label'); return; } const src = sv('#pS'); const row = src ? [k, val, src] : [k, val]; v.specs = v.specs || []; if (+d.i >= 0) v.specs[+d.i] = row; else v.specs.push(row); save(); closeSheet(); render(); },
   delSpec: d => { V(d.vid).specs.splice(+d.i, 1); save(); closeSheet(); render(); },
   editDocs: d => editDocs(d.vid),
   saveDocs: d => { V(d.vid).docs = {insurer: sv('#oIns'), policy: sv('#oPol'), insuranceRenews: sv('#oInsD'), registrationExpires: sv('#oReg'), title: sv('#oTitle'), notes: sv('#oNotes')}; save(); closeSheet(); render(); toast('Saved'); },
@@ -698,7 +701,7 @@ const ACT = {
   // stats
   range: d => { UI.range = d.k; render(); },
   // settings
-  connect: doConnect, syncNow: async () => { SYNC.dirty = true; await Cloud.push(); paintSync(); toast(_syncState === 'synced' ? 'Synced' : 'Sync failed'); },
+  connect: doConnect, syncNow: async () => { await foregroundSync(); if (!LAST_INBOX) { SYNC.dirty = true; await Cloud.push(); } paintSync(); openSettings(); toast(_syncState === 'synced' ? 'Synced' : 'Sync failed'); },
   pullNow: async () => { if (!confirm('Replace all data on this device with the copy in your repo?')) return; try { await Cloud.pull(); closeSheet(); go('#/'); toast('Pulled from repo'); } catch (e) { toast(e.message); } },
   disconnect: () => { if (!confirm('Disconnect sync? Your repo is untouched; the token is removed from this device.')) return; Cloud.disconnect(); openSettings(); },
   copySnap: () => navigator.clipboard.writeText(buildSnapshot()).then(() => toast('Snapshot copied')),
@@ -717,7 +720,15 @@ if (navigator.storage && navigator.storage.persist) navigator.storage.persist().
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('service-worker.js').catch(() => {});
 (async () => {
   await load(); render();
-  const pulled = await Cloud.reconcile().catch(() => false);
-  if (pulled) render();
+  await foregroundSync();
   setInterval(paintSync, 30000);
 })();
+let _lastFg = 0;
+async function foregroundSync() {
+  _lastFg = Date.now();
+  const changed = await Cloud.reconcile().catch(() => false);
+  if (changed && !$('#sheet').classList.contains('open')) render();
+  if (LAST_INBOX) { toast(`Applied ${LAST_INBOX} update${LAST_INBOX > 1 ? 's' : ''} from Claude`); LAST_INBOX = 0; }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - _lastFg > 10000) foregroundSync(); });
+window.addEventListener('pageshow', e => { if (e.persisted && Date.now() - _lastFg > 10000) foregroundSync(); });
