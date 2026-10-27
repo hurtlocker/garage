@@ -782,7 +782,8 @@ function openSettings() {
     ${c ? `<div class="list"><div class="kvrow"><span class="k">Repo</span><span class="v mono">${esc(SYNC.owner)}/${esc(SYNC.repo)}</span></div>
         <div class="kvrow"><span class="k">Status</span><span class="v" style="display:flex;gap:8px;align-items:center"><span class="sync-dot"></span><span class="sync-txt"></span></span></div></div>
       <div class="g2"><button class="btn2" data-act="syncNow">Sync now</button><button class="btn2" data-act="pullNow">Pull from repo</button></div>
-      <button class="btn2" data-act="copySnap">Copy Claude snapshot</button>
+      <div class="g2"><button class="btn2" data-act="copySnap">Copy Claude snapshot</button><button class="btn2" data-act="copyToken">Copy sync token</button></div>
+      <div class="help">Copy the token to connect another device: paste it there under Settings → Token. Anyone with it can read and change your garage data, so only paste it into The Garage.</div>
       ${(DATA.patchLog || []).length ? `<div class="lbl" style="margin-top:4px">Updates from Claude</div><div class="list">${DATA.patchLog.slice(0, 8).map(x => `<div class="kvrow" style="flex-direction:column;align-items:flex-start;gap:2px">
         <span style="font-size:14px">${esc(x.note || 'Update')}</span><span class="mono faint" style="font-size:12px">${x.appliedAt ? fmtDate(x.appliedAt.slice(0, 10), true) : ''} · ${x.ok} change${x.ok === 1 ? '' : 's'}${x.skipped && x.skipped.length ? ` · ${x.skipped.length} skipped` : ''}</span></div>`).join('')}</div>` : ''}
       <button class="btn2 danger" data-act="disconnect">Disconnect</button>`
@@ -945,6 +946,7 @@ const ACT = {
   connect: doConnect, syncNow: async () => { await foregroundSync(); if (!LAST_INBOX) { SYNC.dirty = true; await Cloud.push(); } paintSync(); openSettings(); toast(_syncState === 'synced' ? 'Synced' : 'Sync failed'); },
   pullNow: async () => { if (!confirm('Replace all data on this device with the copy in your repo?')) return; try { await Cloud.pull(); closeSheet(); go('#/'); toast('Pulled from repo'); } catch (e) { toast(e.message); } },
   disconnect: () => { if (!confirm('Disconnect sync? Your repo is untouched; the token is removed from this device.')) return; Cloud.disconnect(); openSettings(); },
+  copyToken: async () => { if (!SYNC.token) { toast('No token on this device'); return; } toast(await copyText(SYNC.token) ? 'Token copied · paste it on the other device' : 'Couldn’t copy the token'); },
   copySnap: () => navigator.clipboard.writeText(buildSnapshot()).then(() => toast('Snapshot copied')),
   saveAlerts: () => { DATA.settings.dueSoonMi = num(sv('#aMi')) ?? 500; DATA.settings.dueSoonDays = num(sv('#aDays')) ?? 30; save(); render(); toast('Saved'); },
   toggleHaptics: (d, el) => { const on = el.getAttribute('aria-checked') !== 'true'; Haptics.setEnabled(on); el.setAttribute('aria-checked', on); if (on) Haptics.tap(); },
