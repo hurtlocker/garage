@@ -82,6 +82,16 @@ function vehicleChips(vid) {
   if (!out.length) out.push(`<span class="chip steel">All clear</span>`);
   return out.join('');
 }
+/* Plate / VIN badge on the home cards. Tapping it copies the value (and doesn't open the vehicle). */
+const idBadge = (val, label, cls = '') => val ? `<span class="plate copyable ${cls}" data-act="copyId" data-v="${esc(val)}" data-l="${label}" role="button" aria-label="Copy ${label} ${esc(val)}">${cls === 'vin' ? '<span class="tag">VIN</span>' : ''}${esc(val)}</span>` : '';
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); return true; } catch (e) {
+    const ta = document.createElement('textarea'); ta.value = t; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;opacity:0;top:0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, t.length);
+    let ok = false; try { ok = document.execCommand('copy'); } catch (_) {} ta.remove(); return ok;
+  }
+}
+
 function renderHome() {
   const vs = [...DATA.vehicles].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const head = `<div class="home-top"><div><div class="kicker">The Garage</div><div class="count">${vs.length} vehicle${vs.length === 1 ? '' : 's'}</div></div>
@@ -97,7 +107,7 @@ function renderHome() {
   const big = `<button class="vcard" data-act="openV" data-vid="${first.id}">
     <div class="hero">${PHOTOS[first.id] ? `<img src="${PHOTOS[first.id]}" alt="">` : IC.car}</div>
     <div class="body"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
-      <div><div class="nm">${esc(vName(first))}</div><div class="sub">${esc(vSub(first))}</div></div>${first.plate ? `<span class="plate">${esc(first.plate)}</span>` : ''}</div>
+      <div style="min-width:0"><div class="nm">${esc(vName(first))}</div><div class="sub">${esc(vSub(first))}</div>${idBadge(first.vin, 'VIN', 'vin')}</div>${idBadge(first.plate, 'Plate')}</div>
       <div class="kv3"><div><div class="lbl">Odometer</div><div class="v">${fmtMi(odo)}</div></div>
         <div><div class="lbl">Last fill</div><div class="v">${fills[0] ? fmtDate(fills[0].date) : '—'}</div></div>
         <div><div class="lbl">Avg MPG</div><div class="v">${avg ? avg.toFixed(1) : '—'}</div></div></div>
@@ -105,8 +115,8 @@ function renderHome() {
   const rows = rest.map(v => `<button class="vrow" data-act="openV" data-vid="${v.id}">
     <div class="thumb">${PHOTOS[v.id] ? `<img src="${PHOTOS[v.id]}" alt="">` : IC.car.replace('64', '36').replace('40', '24')}</div>
     <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="nm" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(vName(v))}</div>${v.plate ? `<span class="plate">${esc(v.plate)}</span>` : ''}</div>
-      <div class="meta">${v.nickname ? esc(`${v.year || ''} ${v.make || ''} ${v.model || ''}`.trim()) + ' · ' : ''}${fmtMi(currentOdo(v.id))} mi</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="nm" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(vName(v))}</div>${idBadge(v.plate, 'Plate')}</div>
+      <div class="meta">${v.nickname ? esc(`${v.year || ''} ${v.make || ''} ${v.model || ''}`.trim()) + ' · ' : ''}${fmtMi(currentOdo(v.id))} mi</div>${idBadge(v.vin, 'VIN', 'vin')}
       <div class="chips">${vehicleChips(v.id)}</div></div>${IC.chev}</button>`).join('');
   return `<div class="home wrap">${head}${big}${rows}<button class="dashed" data-act="addVehicle">${IC.plus} REGISTER VEHICLE</button></div>`;
 }
@@ -865,6 +875,12 @@ const ACT = {
     ['logs', 'schedule', 'services', 'projects'].forEach(k => DATA[k] = DATA[k].filter(x => x.vid !== d.vid)); DATA.vehicles = DATA.vehicles.filter(x => x.id !== d.vid);
     delete PHOTOS[d.vid]; savePhotos(); save(); closeSheet(); go('#/'); },
   flip: (d, el) => el.setAttribute('aria-checked', el.getAttribute('aria-checked') !== 'true'),
+  copyId: async (d, el) => {
+    const ok = await copyText(d.v);
+    el.classList.remove('copied'); void el.offsetWidth; el.classList.add('copied');
+    clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('copied'), 1300);
+    toast(ok ? `${d.l} copied` : d.v);
+  },
   copy: d => { navigator.clipboard && navigator.clipboard.writeText(d.v).then(() => toast('Copied'), () => toast(d.v)); },
   // log draft
   dToggle: (d, el) => { UI.draft[d.k] = !UI.draft[d.k]; el.setAttribute('aria-checked', UI.draft[d.k]); if (d.k === 'fuelOn') $('#fuelBox').classList.toggle('hidden', !UI.draft.fuelOn); },

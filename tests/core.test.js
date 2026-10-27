@@ -10,7 +10,17 @@ module.exports = async ({browser, base, check}) => {
 
   await connect(page);
   check(await page.evaluate(() => DATA.vehicles.length) === 3, 'connect on an empty device pulls the repo');
-  check(JSON.stringify(await page.$$eval('.vcard .plate, .vrow .plate', ps => ps.map(p => p.textContent))) === JSON.stringify(['ROCI000', 'CAMRY00', 'JEEP000']), 'every vehicle card shows its plate');
+  check(JSON.stringify(await page.$$eval('.vcard .plate:not(.vin), .vrow .plate:not(.vin)', ps => ps.map(p => p.textContent))) === JSON.stringify(['ROCI000', 'CAMRY00', 'JEEP000']), 'every vehicle card shows its plate');
+  await page.evaluate(() => { window.__clip = []; navigator.clipboard.writeText = t => (window.__clip.push(t), Promise.resolve()); });
+  check(JSON.stringify(await page.$$eval('.plate.vin', ps => ps.map(p => p.dataset.v))) === JSON.stringify(['TESTVIN00000ROCI1', 'TESTVIN000COMPASS']), 'VIN badges shown (and skipped when blank)');
+  await page.click('.vrow .plate:not(.vin) >> nth=0'); await page.waitForTimeout(150);
+  check(await page.evaluate(() => location.hash) === '' || await page.evaluate(() => location.hash) === '#/', 'tapping a plate does not open the vehicle');
+  check(await page.$eval('.vrow .plate:not(.vin)', e => e.classList.contains('copied')) && (await page.textContent('#toast')).includes('Plate copied'), 'plate tap shows the Copied cue and toast');
+  await shot(page, 'core-01b-copied');
+  await page.click('.vcard .plate.vin'); await page.waitForTimeout(150);
+  check(JSON.stringify(await page.evaluate(() => window.__clip)) === JSON.stringify(['CAMRY00', 'TESTVIN00000ROCI1']), 'plate and VIN copied to the clipboard');
+  await page.waitForTimeout(1400);
+  check(await page.$$eval('.plate.copied', e => e.length) === 0, 'Copied cue clears itself');
   await shot(page, 'core-01-home');
 
   await page.click('[data-act=openV][data-vid=v-roci]');

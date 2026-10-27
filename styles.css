@@ -44,6 +44,18 @@ a{color:var(--red-ink)}
 .vcard .nm{font-family:var(--cond);font-weight:700;font-size:26px;letter-spacing:.06em;text-transform:uppercase}
 .vcard .sub{font-size:14px;color:var(--ink-dim)}
 .plate{font-family:var(--mono);font-size:12px;padding:4px 8px;border:1px solid var(--line-hi);border-radius:6px;white-space:nowrap}
+/* tap-to-copy plate / VIN badges: press shrink, then a red "Copied" flash over the value (width never changes) */
+.plate.copyable{position:relative;display:inline-flex;align-items:center;gap:6px;cursor:copy;flex:none;max-width:100%;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;transition:transform .12s,border-color .2s,background .2s}
+.plate.copyable:active{transform:scale(.95);background:var(--raised)}
+.plate.vin{align-self:flex-start;margin-top:6px;letter-spacing:.04em}
+.vrow .plate.vin{margin-top:0}
+.plate .tag{font-size:9px;letter-spacing:.12em;color:var(--ink-dim)}
+.plate.copied{border-color:var(--red-ink);background:rgba(142,31,34,.25)}
+.plate.copied::after{content:"Copied";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:var(--red);color:#fff;font-family:var(--cond);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+  animation:copiedFlash 1.3s ease forwards}
+@keyframes copiedFlash{0%{opacity:0;transform:scale(.9)}12%{opacity:1;transform:scale(1)}75%{opacity:1}100%{opacity:0}}
 .kv3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .kv3 .v{font-family:var(--mono);font-size:16px;font-weight:600}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
