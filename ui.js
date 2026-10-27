@@ -770,6 +770,7 @@ function openSettings() {
       <button class="switch" role="switch" id="hapOn" aria-checked="${Haptics.enabled()}" aria-label="Haptic feedback" data-act="toggleHaptics"></button></div>
     <div class="lbl" style="margin-top:8px">Backup file</div>
     <div class="g2"><button class="btn2" data-act="exportJSON">Export JSON</button><button class="btn2" data-act="importJSON">Import JSON</button></div>
+    <button class="btn2" data-act="updateApp">Check for app update</button>
     <p class="help faint" style="text-align:center">The Garage v${APP_VERSION}</p>`);
   paintSync();
 }
@@ -909,6 +910,7 @@ const ACT = {
   copySnap: () => navigator.clipboard.writeText(buildSnapshot()).then(() => toast('Snapshot copied')),
   saveAlerts: () => { DATA.settings.dueSoonMi = num(sv('#aMi')) ?? 500; DATA.settings.dueSoonDays = num(sv('#aDays')) ?? 30; save(); render(); toast('Saved'); },
   toggleHaptics: (d, el) => { const on = el.getAttribute('aria-checked') !== 'true'; Haptics.setEnabled(on); el.setAttribute('aria-checked', on); if (on) Haptics.tap(); },
+  updateApp: async () => { toast('Checking…'); try { const r = SW_REG || await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch (e) {} location.reload(); },
   exportJSON, importJSON,
 };
 document.addEventListener('click', e => {
@@ -920,7 +922,18 @@ $('#scrim').addEventListener('click', closeSheet);
 
 /* ---------- boot ---------- */
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('service-worker.js').catch(() => {});
+/* Service worker: never let the browser's HTTP cache serve a stale copy of the SW script itself,
+   and look for a new version every time the app comes back to the foreground. */
+let SW_REG = null;
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('service-worker.js', {updateViaCache: 'none'}).then(r => { SW_REG = r; }).catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // A new version took over while the app was open. Don't yank the screen mid-entry: offer it.
+    if (hadController) toast('App updated', {label: 'Reload', run: () => location.reload()});
+  });
+}
+const checkForAppUpdate = () => { if (SW_REG) SW_REG.update().catch(() => {}); };
 (async () => {
   await load(); render();
   await foregroundSync();
@@ -928,7 +941,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) naviga
 })();
 let _lastFg = 0;
 async function foregroundSync() {
-  _lastFg = Date.now();
+  _lastFg = Date.now(); checkForAppUpdate();
   const changed = await Cloud.reconcile().catch(() => false);
   if (changed && !$('#sheet').classList.contains('open')) render();
   if (LAST_INBOX) { toast(`Applied ${LAST_INBOX} update${LAST_INBOX > 1 ? 's' : ''} from Claude`); LAST_INBOX = 0; }
