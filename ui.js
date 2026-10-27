@@ -27,11 +27,19 @@ const TAGS = ['Leak', 'Noise', 'Smell', 'Tires', 'Electrical', 'Fluids', 'Trip']
 
 const UI = {moreSpecs: false, mxView: 'due', projGroup: 'phase', projCat: 'All', showDone: false, range: '6m', draft: null, draftVid: null};
 let ROUTE = {view: 'home'};
+/* Wide screens (laptop, monitor, iPad landscape) get the desktop Fleet Overview + Workbench (desktop.js).
+   Anything narrower, including an upright iPad, keeps the phone layout. */
+const WIDE_MQ = window.matchMedia('(min-width: 1024px)');
+const isWide = () => WIDE_MQ.matches;
 
 /* ---------- router ---------- */
 function parseRoute() {
   const p = location.hash.replace(/^#\/?/, '').split('/');
-  if (p[0] === 'v' && V(p[1])) return {view: 'vehicle', vid: p[1], tab: ['log', 'mx', 'projects', 'stats'].includes(p[2]) ? p[2] : 'log'};
+  if (p[0] === 'v' && V(p[1])) {
+    let tab = ['log', 'mx', 'projects', 'stats', 'specs'].includes(p[2]) ? p[2] : (isWide() ? deskDefaultTab(p[1]) : 'log');
+    if (tab === 'specs' && !isWide()) { tab = 'mx'; UI.mxView = 'specs'; }            // desktop-only tab → the phone's MX › Specs view
+    return {view: 'vehicle', vid: p[1], tab};
+  }
   return {view: 'home'};
 }
 const go = h => { if (location.hash === h) render(); else location.hash = h; };
@@ -39,10 +47,13 @@ window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); }
 
 function render() {
   ROUTE = parseRoute();
-  const app = $('#app');
-  app.innerHTML = ROUTE.view === 'home' ? renderHome() : renderVehicle(ROUTE.vid, ROUTE.tab);
+  const app = $('#app'), wide = isWide();
+  document.body.classList.toggle('wide', wide);
+  if (wide) app.innerHTML = ROUTE.view === 'home' ? renderFleet() : renderBench(ROUTE.vid, ROUTE.tab);
+  else app.innerHTML = ROUTE.view === 'home' ? renderHome() : renderVehicle(ROUTE.vid, ROUTE.tab);
   paintSync();
-  if (ROUTE.view === 'vehicle' && ROUTE.tab === 'log') wireDraft();
+  if ($('#dOdo')) wireDraft();
+  if (wide) deskAfterRender();
 }
 
 /* ---------- toast + sheet ---------- */
@@ -60,7 +71,7 @@ const hideActionToast = () => { const t = $('#toast'); if (t.classList.contains(
 /** A save was blocked: double tick + message. */
 function warn(msg) { Haptics.error(); toast(msg); }
 function openSheet(title, body, mount) {
-  $('#sheetBody').innerHTML = `<div class="sheet-inner"><div class="grab-zone"><div class="grab"></div><div class="sh"><h2 class="h2" id="sheetTitle">${esc(title)}</h2></div></div><div class="stack">${body}</div></div>`;
+  $('#sheetBody').innerHTML = `<div class="sheet-inner"><div class="grab-zone"><div class="grab"></div><div class="sh"><h2 class="h2" id="sheetTitle">${esc(title)}</h2>${isWide() ? `<button class="sheet-x" data-act="closeSheet" aria-label="Close">${IC.x}</button>` : ''}</div></div><div class="stack">${body}</div></div>`;
   $('#sheet').setAttribute('aria-labelledby', 'sheetTitle');
   $('#scrim').classList.add('open'); $('#sheet').classList.add('open'); $('#sheet').scrollTop = 0;
   if (mount) mount($('#sheet'));
@@ -83,7 +94,7 @@ function vehicleChips(vid) {
   return out.join('');
 }
 /* Plate / VIN badge on the home cards. Tapping it copies the value (and doesn't open the vehicle). */
-const idBadge = (val, label, cls = '') => val ? `<span class="plate copyable ${cls}" data-act="copyId" data-v="${esc(val)}" data-l="${label}" role="button" aria-label="Copy ${label} ${esc(val)}">${cls === 'vin' ? '<span class="tag">VIN</span>' : ''}${esc(val)}</span>` : '';
+const idBadge = (val, label, cls = '') => val ? `<span class="plate copyable ${cls}" data-act="copyId" data-v="${esc(val)}" data-l="${label}" role="button" aria-label="Copy ${label} ${esc(val)}">${cls.includes('vin') ? '<span class="tag">VIN</span>' : ''}${esc(val)}</span>` : '';
 async function copyText(t) {
   try { await navigator.clipboard.writeText(t); return true; } catch (e) {
     const ta = document.createElement('textarea'); ta.value = t; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;opacity:0;top:0';
@@ -153,13 +164,18 @@ function logAlerts(vid) {
   return out.length ? `<div style="display:flex;flex-direction:column;gap:8px">${out.join('')}</div>` : '';
 }
 function renderLog(vid) {
+  const recent = logsOf(vid).sort(cmpDateDesc).slice(0, 10);
+  return `${logAlerts(vid)}${logForm(vid)}
+  <section style="display:flex;flex-direction:column;gap:8px"><div class="lbl">Recent</div>
+    ${recent.length ? recent.map(l => entryRow(vid, l)).join('') : '<div class="empty">No entries yet.</div>'}</section>`;
+}
+/** The new-entry form (phone Log tab, and the desktop Workbench rail). */
+function logForm(vid) {
   if (!UI.draft || UI.draftVid !== vid) { UI.draft = newDraft(vid); UI.draftVid = vid; }
   const d = UI.draft, last = lastLogged(vid);
   const watches = projOf(vid).filter(p => p.watch && p.status !== 'Done');
   const tags = [...new Set([...TAGS, ...d.tags])];
-  const recent = logsOf(vid).sort(cmpDateDesc).slice(0, 10);
-  return `${logAlerts(vid)}
-  <section class="card" aria-label="New entry">
+  return `<section class="card" aria-label="New entry">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
       <div style="font-family:var(--cond);font-weight:700;font-size:20px;letter-spacing:.06em">NEW ENTRY</div>
       <label class="sr" for="dDate">Date</label><input id="dDate" type="date" data-d="date" value="${d.date}" class="mono" style="background:transparent;border:none;color:var(--ink-dim);font-size:16px;text-align:right;min-height:36px">
@@ -186,9 +202,7 @@ function renderLog(vid) {
       ${watches.length ? `<div class="field"><div class="lbl">Attach to watch item</div><div class="pills">${watches.map(p => `<button class="pill sm ${d.projectId === p.id ? 'on' : ''}" data-act="dWatch" data-id="${p.id}">${esc(p.title)}</button>`).join('')}</div></div>` : ''}
     </div>
     <button class="btn" data-act="saveEntry">SAVE ENTRY</button>
-  </section>
-  <section style="display:flex;flex-direction:column;gap:8px"><div class="lbl">Recent</div>
-    ${recent.length ? recent.map(l => entryRow(vid, l)).join('') : '<div class="empty">No entries yet.</div>'}</section>`;
+  </section>`;
 }
 function entryRow(vid, l) {
   const d = parseD(l.date), f = l.fuel; const mp = f ? mpgFor(vid, l.id) : null;
@@ -319,16 +333,23 @@ function kv(k, v, act, data = '', copy, src) {
     <span class="k">${esc(k)}</span><span class="v mono ${v ? '' : 'unset'}" style="${v ? '' : 'font-family:var(--sans)'}">${v ? esc(v) : 'Not set'}${src ? `<span class="faint" style="display:block;font-family:var(--sans);font-size:11px">${esc(src)}</span>` : ''}</span></button>
     ${copy && v ? `<button class="x" data-act="copy" data-v="${esc(v)}" aria-label="Copy ${esc(k)}">${IC.copy}</button>` : ''}</div>`;
 }
-function mxSpecs(vid) {
-  const v = V(vid), d = v.docs || {};
+function mxSpecs(vid) { return specVehicle(vid) + specRef(vid) + specDocs(vid); }
+function specVehicle(vid) {
+  const v = V(vid);
   return `<div style="display:flex;justify-content:space-between;align-items:center"><h2 class="h2">Vehicle</h2><button class="btn2 sm" data-act="editVehicle" data-vid="${vid}">Edit</button></div>
     <div class="list">${kv('Year / make / model', [v.year, v.make, v.model].filter(Boolean).join(' '), 'editVehicle', `data-vid="${vid}"`)}
       ${kv('Trim', v.trim, 'editVehicle', `data-vid="${vid}"`)}${kv('Transmission', v.transmission, 'editVehicle', `data-vid="${vid}"`)}
       ${kv('Plate', v.plate, 'editVehicle', `data-vid="${vid}"`, true)}${kv('VIN', v.vin, 'editVehicle', `data-vid="${vid}"`, true)}
-      ${kv('Purchased', v.purchaseDate || v.purchaseMi ? `${v.purchaseDate ? fmtDate(v.purchaseDate, true) : ''}${v.purchaseMi ? ' · ' + fmtMi(v.purchaseMi) + ' mi' : ''}` : '', 'editVehicle', `data-vid="${vid}"`)}</div>
-    <div style="display:flex;justify-content:space-between;align-items:center"><h2 class="h2">Specs &amp; reference</h2><button class="btn2 sm" data-act="editSpec" data-vid="${vid}" data-i="-1">+ Spec</button></div>
-    ${specLists(vid, v)}
-    <div style="display:flex;justify-content:space-between;align-items:center"><h2 class="h2">Documents</h2><button class="btn2 sm" data-act="editDocs" data-vid="${vid}">Edit</button></div>
+      ${kv('Purchased', v.purchaseDate || v.purchaseMi ? `${v.purchaseDate ? fmtDate(v.purchaseDate, true) : ''}${v.purchaseMi ? ' · ' + fmtMi(v.purchaseMi) + ' mi' : ''}` : '', 'editVehicle', `data-vid="${vid}"`)}</div>`;
+}
+function specRef(vid) {
+  const v = V(vid);
+  return `<div style="display:flex;justify-content:space-between;align-items:center"><h2 class="h2">Specs &amp; reference</h2><button class="btn2 sm" data-act="editSpec" data-vid="${vid}" data-i="-1">+ Spec</button></div>
+    ${specLists(vid, v)}`;
+}
+function specDocs(vid) {
+  const d = V(vid).docs || {};
+  return `<div style="display:flex;justify-content:space-between;align-items:center"><h2 class="h2">Documents</h2><button class="btn2 sm" data-act="editDocs" data-vid="${vid}">Edit</button></div>
     <div class="list">${kv('Insurer', d.insurer, 'editDocs', `data-vid="${vid}"`)}${kv('Policy number', d.policy, 'editDocs', `data-vid="${vid}"`, true)}
       ${kv('Insurance renews', d.insuranceRenews ? fmtDate(d.insuranceRenews, true) : '', 'editDocs', `data-vid="${vid}"`)}
       ${kv('Registration expires', d.registrationExpires ? fmtDate(d.registrationExpires, true) : '', 'editDocs', `data-vid="${vid}"`)}
@@ -827,7 +848,7 @@ function flashCard(id) {
   let y0 = null, dy = 0, dragging = false, samples = [], armed = false;
   const limit = () => Math.min(140, sh.offsetHeight * 0.25);
   sh.addEventListener('touchstart', e => {
-    if (!sh.classList.contains('open') || e.touches.length > 1) { y0 = null; return; }
+    if (!sh.classList.contains('open') || e.touches.length > 1 || document.body.classList.contains('wide')) { y0 = null; return; }   // the desktop side panel doesn't pull down
     const onHandle = !!e.target.closest('.grab-zone');
     // From the body, only start a pull when the sheet is scrolled to the top and the finger isn't in a text box.
     if (e.target.closest('.grip, .swipe-row')) { y0 = null; return; }   // reorder handles and swipe rows own their touches
@@ -868,7 +889,7 @@ function flashCard(id) {
    ACTIONS (event delegation)
    ============================================================ */
 const ACT = {
-  closeSheet, settings: openSettings, addVehicle: () => editVehicle(null), openV: d => go(`#/v/${d.vid}/log`),
+  closeSheet, settings: openSettings, addVehicle: () => editVehicle(null), openV: d => go(isWide() ? `#/v/${d.vid}/${deskDefaultTab(d.vid)}` : `#/v/${d.vid}/log`), goMx: d => go(`#/v/${d.vid}/mx`),
   editVehicle: d => editVehicle(d.vid), saveVehicle: d => saveVehicle(d.vid),
   moveVehicle: d => { const vs = [...DATA.vehicles].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)); const v = V(d.vid); vs.splice(vs.indexOf(v), 1); vs.unshift(v); vs.forEach((x, i) => x.order = i); save(); closeSheet(); toast('Now the main card'); },
   delVehicle: d => { const v = V(d.vid); if (!confirm(`Delete ${vName(v)} and all of its log, MX and project data? This can't be undone.`)) return;
@@ -936,6 +957,7 @@ document.addEventListener('click', e => {
   e.preventDefault(); fn(el.dataset, el, e);
 });
 $('#scrim').addEventListener('click', closeSheet);
+WIDE_MQ.addEventListener('change', () => render());     // window resized across 1024 px: switch layouts in place
 
 /* ---------- boot ---------- */
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

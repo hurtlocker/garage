@@ -39,6 +39,10 @@ Sync runs about 2.5 s after each change. If you're offline, changes are queued. 
 4. On the iPhone, open `https://hurtlocker.github.io/garage/` in Safari, then **Share → Add to Home Screen**.
 5. In the app, tap the sync button on the home screen, paste the token, and tap **Connect**. Because the device starts empty, it loads the data from the repo.
 
+## Desktop
+
+In a window 1024 px or wider (laptop, monitor, iPad in landscape) the app switches to a desktop layout. Home is the **Fleet Overview**: critical alerts, one column per vehicle, a fleet activity feed and spend. A vehicle opens in the **Workbench**: the log form and what's due on the left, with Board (drag projects between phases), MX, Log, Stats and Specs tabs. Edit cards open as a side panel. Narrower windows keep the phone layout. The desktop screens are in `desktop.js`.
+
 ## Tests
 
 `tests/` holds end-to-end checks for every screen and for sync. Run `cd tests && npm install && npm test` before and after changes. See `tests/README.md`.
