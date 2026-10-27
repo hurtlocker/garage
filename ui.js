@@ -765,9 +765,9 @@ function openSettings() {
     <div class="g2"><div class="field"><label class="lbl" for="aMi">Due soon within mi</label><input id="aMi" class="fld" inputmode="numeric" value="${DATA.settings.dueSoonMi}"></div>
       <div class="field"><label class="lbl" for="aDays">…or days</label><input id="aDays" class="fld" inputmode="numeric" value="${DATA.settings.dueSoonDays}"></div></div>
     <button class="btn2" data-act="saveAlerts">Save alert thresholds</button>
-    <div class="lbl" style="margin-top:8px">This device</div>
+    ${HAPTICS_SHELVED ? '' : `<div class="lbl" style="margin-top:8px">This device</div>
     <div class="switchrow"><div>Haptic feedback<span class="s">Ticks when you cross a line or finish something. On iPhone this is a light system tick.</span></div>
-      <button class="switch" role="switch" id="hapOn" aria-checked="${Haptics.enabled()}" aria-label="Haptic feedback" data-act="toggleHaptics"></button></div>
+      <button class="switch" role="switch" id="hapOn" aria-checked="${Haptics.enabled()}" aria-label="Haptic feedback" data-act="toggleHaptics"></button></div>`}
     <div class="lbl" style="margin-top:8px">Backup file</div>
     <div class="g2"><button class="btn2" data-act="exportJSON">Export JSON</button><button class="btn2" data-act="importJSON">Import JSON</button></div>
     <button class="btn2" data-act="updateApp">Check for app update</button>

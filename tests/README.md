@@ -18,7 +18,7 @@ The runner serves the app folder itself, so no server or network is needed. GitH
 | `inbox.test.js` | Claude's `inbox.json`: every op type, invalid ops skipped and logged, unsynced phone data never overwritten, each patch applied only once, inbox emptied, another device's changes pulled when the app returns to the foreground |
 | `phases-sheet.test.js` | Old phase labels migrate to 1–5, all five phases are listed, the locked phase picker, new projects never hidden by a filter, pull-down-to-dismiss (snap back, flick, scroll and textarea cases), Esc and tap-outside |
 | `reorder.test.js` | Press-and-hold drag for tasks and parts, no accidental reorders, edits kept, arrow keys, saved order |
-| `swipe-haptics.test.js` | Swipe left to delete tasks and parts (partial swipe snaps back, armed at halfway, Undo, no stray checkbox toggles, Delete key), and all six haptic moments, including the iPhone switch-tick path |
+| `swipe.test.js` | Swipe left to delete tasks and parts (partial swipe snaps back, armed at halfway, Undo, no stray checkbox toggles, Delete key), the visual cue at each line-crossing moment, and that haptics stay shelved |
 | `quick-specs.test.js` | Quick reference vs. All other specs, the toggle on the edit card, inbox updates respecting placement, snapshot order |
 | `update.test.js` | A new deploy shows up on the next open even inside GitHub Pages' 10-minute cache window, and the offline copy is the new version (serves the app the way Pages does, with the service worker on) |
 | `fonts.test.js` | Every input, select and textarea is at least 16px, so iOS never zooms on focus |

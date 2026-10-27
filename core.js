@@ -2,7 +2,7 @@
 /* ============================================================
    THE GARAGE — core: utils, storage, calculations, sync, snapshot
    ============================================================ */
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.5.2';
 
 /* ---------- utils ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -40,6 +40,7 @@ const cmpDateDesc = (a, b) => (b.date || '').localeCompare(a.date || '') || (b.o
    <input type="checkbox" switch>, which makes iOS play its system "tick". One feel only, and
    it's a workaround Apple could remove, so every haptic moment also has a visual cue.
    Kinds: tap (lift/start), step (light, per slot), threshold (crossed a line), success, error (double). */
+const HAPTICS_SHELVED = true;   // 2026-10-26: no tick felt on Josh's iPhone. Flip to false (and restore the Settings row) to bring them back.
 const Haptics = (() => {
   const canVibrate = typeof navigator.vibrate === 'function';
   const PATTERN = {tap: 12, step: 6, threshold: 14, success: 18, error: [14, 70, 14]};
@@ -56,7 +57,7 @@ const Haptics = (() => {
     label.click();
   }
   function fire(kind) {
-    if (!enabled()) return;
+    if (HAPTICS_SHELVED || !enabled()) return;
     log.push(kind); if (log.length > 40) log.shift();
     try {
       if (canVibrate) { navigator.vibrate(PATTERN[kind] || 12); return; }

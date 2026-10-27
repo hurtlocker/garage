@@ -29,7 +29,8 @@ module.exports = async ({browser, base, check}) => {
   await touchDrag(cdp, page, 195, hy, 30, {stepMs: 60}); check(await isOpen(), 'short slow pull snaps back');
   await touchDrag(cdp, page, 195, hy, 260, {stepMs: 40}); check(!(await isOpen()), 'pull down on the handle dismisses');
   await openSheet(); hy = await handleY();
-  await touchDrag(cdp, page, 195, hy, 80, {hold: 500, steps: 4, stepMs: 12}); check(!(await isOpen()), 'a quick flick (even after a pause) dismisses');
+  // 120 px is under the close distance (140 px), so only the flick's speed can close it
+  await touchDrag(cdp, page, 195, hy, 120, {hold: 500, steps: 4, stepMs: 6}); check(!(await isOpen()), 'a quick flick (even after a pause) dismisses');
   await openSheet();
   const by = await page.$eval('#jStatus', e => e.getBoundingClientRect().top - 30);
   await touchDrag(cdp, page, 195, by, 260, {stepMs: 40}); check(!(await isOpen()), 'pull from the body at scroll-top dismisses');
