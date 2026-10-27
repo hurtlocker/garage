@@ -2,7 +2,7 @@
 /* ============================================================
    THE GARAGE — core: utils, storage, calculations, sync, snapshot
    ============================================================ */
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.4.0';
 
 /* ---------- utils ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -80,6 +80,15 @@ function save(opts = {}) {
 }
 const saveSync = () => idbPut('sync', SYNC).catch(() => {});
 const savePhotos = () => idbPut('photos', PHOTOS).catch(() => {});
+
+/* ---------- specs: quick reference vs. the rest ----------
+   Spec rows are [label, value, source, quick?]. quick === true/false is the user's choice;
+   undefined falls back to this default list, which is also the display order of the Quick reference. */
+const QUICK_DEFAULT = ['engine oil', 'oil capacity', 'oil filter', 'oil drain plug', 'oil change interval',
+  'tire pressure', 'tire size', 'lug nuts', 'wipers (d / p)', 'spark plugs', 'fuel tank'];
+const specKey = s => String(s[0] || '').trim().toLowerCase();
+const isQuick = s => s[3] === true || (s[3] !== false && QUICK_DEFAULT.includes(specKey(s)));
+const quickRank = s => { const i = QUICK_DEFAULT.indexOf(specKey(s)); return i < 0 ? 999 : i; };
 
 /* ---------- phases: strict 1–5 (or none) ---------- */
 const PHASES = [1, 2, 3, 4, 5];
@@ -422,7 +431,9 @@ function applyPatch(p) {
           if (!v || !op.key) throw 'vehicle/key';
           v.specs = v.specs || [];
           const i = v.specs.findIndex(s => s[0].toLowerCase() === String(op.key).toLowerCase());
-          const row = [String(op.key), String(op.value ?? '')]; if (op.source) row.push(String(op.source));
+          const row = [i >= 0 ? v.specs[i][0] : String(op.key), String(op.value ?? ''), op.source ? String(op.source) : ''];   // keep the existing label as written
+          const q = op.quick !== undefined ? !!op.quick : (i >= 0 ? v.specs[i][3] : undefined);   // keep Josh's placement
+          if (q !== undefined) row[3] = q;
           if (i >= 0) v.specs[i] = row; else v.specs.push(row);
           break;
         }
@@ -478,7 +489,12 @@ function buildSnapshot() {
       d.registrationExpires && `registration expires ${fmtDate(d.registrationExpires, true)}`, d.title && `title ${d.title}`].filter(Boolean).join(' · ');
     if (docLine) L.push(`- Docs: ${docLine}`);
     const specs = (v.specs || []).filter(s => s[1]);
-    if (specs.length) { L.push(``, `**Specs**`, ``); specs.forEach(s => L.push(`- ${s[0]}: ${s[1]}${s[2] ? ` _(${s[2]})_` : ''}`)); }
+    if (specs.length) {
+      const line = s => L.push(`- ${s[0]}: ${s[1]}${s[2] ? ` _(${s[2]})_` : ''}`);
+      const q = specs.filter(isQuick).sort((a, b) => quickRank(a) - quickRank(b)), r = specs.filter(s => !isQuick(s));
+      if (q.length) { L.push(``, `**Quick reference**`, ``); q.forEach(line); }
+      if (r.length) { L.push(``, `**Other specs**`, ``); r.forEach(line); }
+    }
     const watches = projOf(v.id).filter(p => p.watch && p.status !== 'Done');
     const crit = m.items.filter(x => x.st.state === 'overdue' || x.st.state === 'soon');
     if (watches.length || crit.length || m.docs.some(x => x.state !== 'ok')) {

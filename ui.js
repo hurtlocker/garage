@@ -25,7 +25,7 @@ const SVC_TYPES = ['Oil Change', 'Tires', 'Brakes', 'Fluids', 'Filters', 'Coolin
 const GRADES = ['87', '89', '91', '93', 'E85', 'Diesel'];
 const TAGS = ['Leak', 'Noise', 'Smell', 'Tires', 'Electrical', 'Fluids', 'Trip'];
 
-const UI = {mxView: 'due', projGroup: 'phase', projCat: 'All', showDone: false, range: '6m', draft: null, draftVid: null};
+const UI = {moreSpecs: false, mxView: 'due', projGroup: 'phase', projCat: 'All', showDone: false, range: '6m', draft: null, draftVid: null};
 let ROUTE = {view: 'home'};
 
 /* ---------- router ---------- */
@@ -305,7 +305,7 @@ function mxSpecs(vid) {
       ${kv('Plate', v.plate, 'editVehicle', `data-vid="${vid}"`, true)}${kv('VIN', v.vin, 'editVehicle', `data-vid="${vid}"`, true)}
       ${kv('Purchased', v.purchaseDate || v.purchaseMi ? `${v.purchaseDate ? fmtDate(v.purchaseDate, true) : ''}${v.purchaseMi ? ' · ' + fmtMi(v.purchaseMi) + ' mi' : ''}` : '', 'editVehicle', `data-vid="${vid}"`)}</div>
     <div style="display:flex;justify-content:space-between;align-items:center"><h2 class="h2">Specs &amp; reference</h2><button class="btn2 sm" data-act="editSpec" data-vid="${vid}" data-i="-1">+ Spec</button></div>
-    <div class="list">${(v.specs || []).map((s, i) => kv(s[0], s[1], 'editSpec', `data-vid="${vid}" data-i="${i}"`, false, s[2])).join('') || '<div class="kvrow"><span class="k">No specs yet</span></div>'}</div>
+    ${specLists(vid, v)}
     <div style="display:flex;justify-content:space-between;align-items:center"><h2 class="h2">Documents</h2><button class="btn2 sm" data-act="editDocs" data-vid="${vid}">Edit</button></div>
     <div class="list">${kv('Insurer', d.insurer, 'editDocs', `data-vid="${vid}"`)}${kv('Policy number', d.policy, 'editDocs', `data-vid="${vid}"`, true)}
       ${kv('Insurance renews', d.insuranceRenews ? fmtDate(d.insuranceRenews, true) : '', 'editDocs', `data-vid="${vid}"`)}
@@ -369,12 +369,27 @@ function saveService(id, vid) {
   }
   save(); closeSheet(); render(); toast('Service logged');
 }
+function specLists(vid, v) {
+  const all = (v.specs || []).map((s, i) => ({s, i}));
+  if (!all.length) return '<div class="list"><div class="kvrow"><span class="k">No specs yet</span></div></div>';
+  const row = x => kv(x.s[0], x.s[1], 'editSpec', `data-vid="${vid}" data-i="${x.i}"`, false, x.s[2]);
+  const quick = all.filter(x => isQuick(x.s)).sort((a, b) => quickRank(a.s) - quickRank(b.s) || a.i - b.i);
+  const rest = all.filter(x => !isQuick(x.s));
+  const open = UI.moreSpecs;
+  return `<div class="lbl" style="margin-bottom:-6px">Quick reference</div>
+    <div class="list">${quick.map(row).join('') || '<div class="kvrow"><span class="k" style="max-width:none">Nothing pinned. Open a spec and turn on “Quick reference”.</span></div>'}</div>
+    ${rest.length ? `<button class="more-toggle" data-act="toggleSpecs" aria-expanded="${open}" aria-controls="moreSpecs">
+      <span>All other specs <span class="n">${rest.length}</span></span>${IC.chev}</button>
+      <div id="moreSpecs" class="list ${open ? '' : 'hidden'}">${rest.map(row).join('')}</div>` : ''}`;
+}
 function editSpec(vid, i) {
   const v = V(vid), s = i >= 0 ? v.specs[i] : ['', ''];
   openSheet(i >= 0 ? 'Edit spec' : 'New spec', `
     <div class="field"><label class="lbl" for="pK">Label</label><input id="pK" class="fld txt" value="${esc(s[0])}" placeholder="e.g. Tire size"></div>
     <div class="field"><label class="lbl" for="pV">Value</label><input id="pV" class="fld txt" value="${esc(s[1])}" placeholder="e.g. 205/55R16 · 32 psi"></div>
     <div class="field"><label class="lbl" for="pS">Source</label><input id="pS" class="fld txt" value="${esc(s[2] || '')}" placeholder="Optional — e.g. FSM p. 2-14"></div>
+    <div class="switchrow"><div>Show in Quick reference<span class="s">Off moves it under “All other specs”</span></div>
+      <button class="switch" role="switch" id="pQ" aria-checked="${i >= 0 ? isQuick(s) : true}" aria-label="Show in Quick reference" data-act="flip"></button></div>
     <button class="btn" data-act="saveSpec" data-vid="${vid}" data-i="${i}">SAVE</button>
     ${i >= 0 ? `<button class="btn2 danger" data-act="delSpec" data-vid="${vid}" data-i="${i}">Delete spec</button>` : ''}`, sh => $('#pV', sh).focus());
 }
@@ -784,8 +799,9 @@ const ACT = {
   addService: d => editService(null, d.vid, d.sched), editService: d => editService(d.id), saveService: d => saveService(d.id, d.vid),
   delService: d => { if (!confirm('Delete this record?')) return; DATA.services = DATA.services.filter(x => x.id !== d.id); save(); closeSheet(); render(); },
   editSpec: d => editSpec(d.vid, +d.i),
-  saveSpec: d => { const v = V(d.vid), k = sv('#pK'), val = sv('#pV'); if (!k) { toast('Add a label'); return; } const src = sv('#pS'); const row = src ? [k, val, src] : [k, val]; v.specs = v.specs || []; if (+d.i >= 0) v.specs[+d.i] = row; else v.specs.push(row); save(); closeSheet(); render(); },
+  saveSpec: d => { const v = V(d.vid), k = sv('#pK'), val = sv('#pV'); if (!k) { toast('Add a label'); return; } const src = sv('#pS'); const q = $('#pQ', $('#sheet')).getAttribute('aria-checked') === 'true'; const row = [k, val, src, q]; v.specs = v.specs || []; if (+d.i >= 0) v.specs[+d.i] = row; else v.specs.push(row); save(); closeSheet(); render(); },
   delSpec: d => { V(d.vid).specs.splice(+d.i, 1); save(); closeSheet(); render(); },
+  toggleSpecs: (d, el) => { UI.moreSpecs = !UI.moreSpecs; el.setAttribute('aria-expanded', UI.moreSpecs); $('#moreSpecs').classList.toggle('hidden', !UI.moreSpecs); },
   editDocs: d => editDocs(d.vid),
   saveDocs: d => { V(d.vid).docs = {insurer: sv('#oIns'), policy: sv('#oPol'), insuranceRenews: sv('#oInsD'), registrationExpires: sv('#oReg'), title: sv('#oTitle'), notes: sv('#oNotes')}; save(); closeSheet(); render(); toast('Saved'); },
   // projects
