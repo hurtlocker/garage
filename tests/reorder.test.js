@@ -7,7 +7,7 @@ module.exports = async ({browser, base, check}) => {
   await page.click('.pcard >> text=Head unit wiring'); await page.waitForTimeout(400);
   const order = () => page.evaluate(() => PDRAFT.tasks.map(t => t.t));
   const grip = (list, i) => page.$eval(`.grip[data-list="${list}"][data-i="${i}"]`, e => { e.scrollIntoView({block: 'center'}); const r = e.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2}; });
-  const stepOf = list => page.evaluate(l => { const r = $$(`#j${l} .row-edit`); return r[1].getBoundingClientRect().top - r[0].getBoundingClientRect().top; }, list);
+  const stepOf = list => page.evaluate(l => { const r = $$(`#j${l} .swipe-row`); return r[1].getBoundingClientRect().top - r[0].getBoundingClientRect().top; }, list);
   const step = await stepOf('Tasks');
   const o0 = await order();
 
@@ -20,7 +20,7 @@ module.exports = async ({browser, base, check}) => {
   const o1 = await order();
   check(JSON.stringify(o1) === JSON.stringify([o0[1], o0[2], o0[0]]), 'hold + drag moves the first task to the bottom');
   check(await page.evaluate(() => $('#sheet').classList.contains('open')), 'dragging down on a handle never dismisses the sheet');
-  check(await page.evaluate(() => $$('#jTasks .row-edit').every(r => !r.style.transform && !r.classList.contains('dragging'))), 'rows reset after drop');
+  check(await page.evaluate(() => $$('#jTasks .swipe-row').every(r => !r.style.transform && !r.classList.contains('dragging'))), 'rows reset after drop');
   g = await grip('tasks', 2); await touchDrag(cdp, page, g.x, g.y, -step, {hold: 400, steps: 12});
   check(JSON.stringify(await order()) === JSON.stringify([o1[0], o1[2], o1[1]]), 'drag up one place');
 

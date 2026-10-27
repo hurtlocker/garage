@@ -162,14 +162,14 @@ input[type=date].fld{font-family:var(--mono);font-size:16px}
 .check{display:flex;align-items:center;gap:10px;font-size:14px;min-height:36px;width:100%;text-align:left}
 .box{width:20px;height:20px;flex:none;border-radius:5px;border:1.5px solid var(--line-hi);display:flex;align-items:center;justify-content:center}
 .box.on{background:var(--red);border-color:var(--red)}
-.row-edit{display:grid;grid-template-columns:28px minmax(0,1fr) 84px 32px 36px;gap:8px;align-items:center;position:relative;transition:transform .16s ease}
-.row-edit.tasks{grid-template-columns:28px minmax(0,1fr) 32px 36px}
-.grip{width:32px;height:42px;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);border-radius:8px;cursor:grab;
+.row-edit{display:grid;grid-template-columns:28px minmax(0,1fr) 84px 36px;gap:8px;align-items:center;position:relative;background:var(--panel);transition:transform .2s ease}
+.row-edit.tasks{grid-template-columns:28px minmax(0,1fr) 36px}
+.grip{width:36px;height:42px;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);border-radius:8px;cursor:grab;
   touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .grip:active,.grip:focus-visible{color:var(--ink);background:var(--raised);outline:none}
-.sorting .row-edit{transition:transform .16s ease}
-.row-edit.dragging{transition:none;z-index:3;background:var(--panel);border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.55),0 0 0 1px var(--line-hi)}
-.row-edit.dragging .grip{color:var(--red-ink);cursor:grabbing}
+.sorting .swipe-row{transition:transform .16s ease}
+.swipe-row.dragging{transition:none;z-index:3;background:var(--panel);border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.55),0 0 0 1px var(--line-hi)}
+.swipe-row.dragging .grip{color:var(--red-ink);cursor:grabbing}
 .row-edit .fld{min-height:42px;font-size:16px}
 .x{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--ink-dim)}
 
@@ -229,3 +229,19 @@ input,select,textarea{font-size:16px}
 .more-toggle[aria-expanded=true]{border-radius:12px 12px 0 0;border-bottom-color:var(--line-lo)}
 .more-toggle[aria-expanded=true] svg{transform:rotate(90deg)}
 .more-toggle[aria-expanded=true]+.list{border-top:none;border-radius:0 0 12px 12px;margin-top:-16px}
+
+/* swipe to delete */
+.swipe-row{position:relative;border-radius:10px;touch-action:pan-y;transition:transform .16s ease}
+.swipe-bg{position:absolute;inset:0;border-radius:10px;background:#5A1A1C;display:flex;align-items:center;justify-content:flex-end;padding-right:16px;
+  color:#F6D5D2;font-size:14px;opacity:0;transition:background .12s,opacity .12s}
+.swipe-bg .swipe-lbl{display:inline-flex;align-items:center;gap:6px}
+.swipe-row.swiping .swipe-bg{opacity:1}
+.swipe-row.armed .swipe-bg{background:var(--red-hi);color:#fff}
+.swipe-row.armed .swipe-lbl{transform:scale(1.06)}
+.swipe-row.collapsing{height:0!important;margin-top:-8px;opacity:0;transition:height .2s ease,margin .2s ease,opacity .2s ease;overflow:hidden}
+/* sheet: past the close line */
+.sheet .grab{transition:background .12s,width .12s}
+.sheet.will-close .grab{background:var(--red-ink);width:64px}
+/* toast with Undo */
+.toast.has-action{pointer-events:auto;display:flex;align-items:center;gap:14px;padding-right:8px}
+.toast-act{min-height:36px;padding:0 12px;border-radius:8px;color:var(--red-ink);font-weight:700;font-size:14px;letter-spacing:.04em}

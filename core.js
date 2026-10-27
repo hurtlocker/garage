@@ -2,7 +2,7 @@
 /* ============================================================
    THE GARAGE — core: utils, storage, calculations, sync, snapshot
    ============================================================ */
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.0';
 
 /* ---------- utils ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -34,6 +34,39 @@ function addMonths(s, m) {
 const daysBetween = (a, b) => Math.round((parseD(b) - parseD(a)) / 864e5);
 const monthKey = s => s ? s.slice(0, 7) : null;
 const cmpDateDesc = (a, b) => (b.date || '').localeCompare(a.date || '') || (b.odo || 0) - (a.odo || 0);
+
+/* ---------- haptics ----------
+   Android: navigator.vibrate. iPhone: Safari has no vibration API, so we toggle a hidden
+   <input type="checkbox" switch>, which makes iOS play its system "tick". One feel only, and
+   it's a workaround Apple could remove, so every haptic moment also has a visual cue.
+   Kinds: tap (lift/start), step (light, per slot), threshold (crossed a line), success, error (double). */
+const Haptics = (() => {
+  const canVibrate = typeof navigator.vibrate === 'function';
+  const PATTERN = {tap: 12, step: 6, threshold: 14, success: 18, error: [14, 70, 14]};
+  let label = null; const log = [];
+  const enabled = () => { try { return localStorage.getItem('garage.haptics') !== 'off'; } catch (e) { return true; } };
+  function iosTick() {
+    if (!label) {
+      const wrap = document.createElement('div');
+      wrap.setAttribute('aria-hidden', 'true');
+      wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
+      wrap.innerHTML = '<input type="checkbox" switch id="hapticSwitch" tabindex="-1"><label for="hapticSwitch"></label>';
+      document.body.appendChild(wrap); label = wrap.querySelector('label');
+    }
+    label.click();
+  }
+  function fire(kind) {
+    if (!enabled()) return;
+    log.push(kind); if (log.length > 40) log.shift();
+    try {
+      if (canVibrate) { navigator.vibrate(PATTERN[kind] || 12); return; }
+      iosTick();
+      if (kind === 'error') setTimeout(iosTick, 90);
+    } catch (e) { /* haptics are best-effort */ }
+  }
+  return {tap: () => fire('tap'), step: () => fire('step'), threshold: () => fire('threshold'), success: () => fire('success'), error: () => fire('error'),
+    enabled, setEnabled: on => { try { localStorage.setItem('garage.haptics', on ? 'on' : 'off'); } catch (e) {} }, log};
+})();
 
 /* ---------- state ---------- */
 const EMPTY = () => ({app: 'Garage', version: 1, updatedAt: null, vehicles: [], logs: [], schedule: [], services: [], projects: [],

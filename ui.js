@@ -47,14 +47,25 @@ function render() {
 
 /* ---------- toast + sheet ---------- */
 let _toastT;
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(_toastT); _toastT = setTimeout(() => t.classList.remove('on'), 2200); }
+function toast(msg, action) {
+  const t = $('#toast'); clearTimeout(_toastT);
+  t.textContent = msg; t.classList.toggle('has-action', !!action);
+  if (action) {
+    const b = document.createElement('button'); b.className = 'toast-act'; b.textContent = action.label;
+    b.onclick = () => { t.classList.remove('on', 'has-action'); action.run(); }; t.appendChild(b);
+  }
+  t.classList.add('on'); _toastT = setTimeout(() => t.classList.remove('on', 'has-action'), action ? 4500 : 2200);
+}
+const hideActionToast = () => { const t = $('#toast'); if (t.classList.contains('has-action')) t.classList.remove('on', 'has-action'); };
+/** A save was blocked: double tick + message. */
+function warn(msg) { Haptics.error(); toast(msg); }
 function openSheet(title, body, mount) {
   $('#sheetBody').innerHTML = `<div class="sheet-inner"><div class="grab-zone"><div class="grab"></div><div class="sh"><h2 class="h2" id="sheetTitle">${esc(title)}</h2></div></div><div class="stack">${body}</div></div>`;
   $('#sheet').setAttribute('aria-labelledby', 'sheetTitle');
   $('#scrim').classList.add('open'); $('#sheet').classList.add('open'); $('#sheet').scrollTop = 0;
   if (mount) mount($('#sheet'));
 }
-function closeSheet() { $('#scrim').classList.remove('open'); $('#sheet').classList.remove('open'); }
+function closeSheet() { $('#scrim').classList.remove('open'); $('#sheet').classList.remove('open'); hideActionToast(); }
 const sv = (sel) => { const el = $(sel, $('#sheet')); return el ? el.value.trim() : ''; };
 
 /* ============================================================
@@ -202,19 +213,19 @@ function saveEntry() {
   let fuel = null;
   if (d.fuelOn) {
     const ppg = num(d.ppg), gal = num(d.gal), total = num(d.total);
-    if (ppg == null && gal == null && total == null) { if (!hasNote && odo == null) { toast('Nothing to save yet'); return; } }
+    if (ppg == null && gal == null && total == null) { if (!hasNote && odo == null) { warn('Nothing to save yet'); return; } }
     else {
-      if (odo == null) { toast('Odometer is needed for a fill-up'); $('#dOdo').focus(); return; }
+      if (odo == null) { warn('Odometer is needed for a fill-up'); $('#dOdo').focus(); return; }
       fuel = {grade: d.grade, ppg, gal: gal != null ? gal : (total != null && ppg ? +(total / ppg).toFixed(3) : null),
         total: total != null ? total : (ppg != null && gal != null ? +(ppg * gal).toFixed(2) : null), full: d.full, station: d.station.trim()};
     }
   }
-  if (!fuel && !hasNote && odo == null) { toast('Nothing to save yet'); return; }
-  if (odo != null && last && odo < last.odo && !confirm(`Odometer ${fmtMi(odo)} is lower than the last entry (${fmtMi(last.odo)}). Save anyway?`)) return;
+  if (!fuel && !hasNote && odo == null) { warn('Nothing to save yet'); return; }
+  if (odo != null && last && odo < last.odo && (Haptics.error(), !confirm(`Odometer ${fmtMi(odo)} is lower than the last entry (${fmtMi(last.odo)}). Save anyway?`))) return;
   const entry = {id: uid('l'), vid, date: d.date || today(), odo, fuel, note: d.note.trim(), tags: [...d.tags], projectId: d.projectId};
   DATA.logs.push(entry); save();
   const mp = fuel ? mpgFor(vid, entry.id) : null;
-  UI.draft = newDraft(vid); render();
+  UI.draft = newDraft(vid); render(); Haptics.success();
   toast(mp ? `Saved · ${mp.toFixed(1)} mpg` : 'Entry saved');
 }
 function editEntry(id) {
@@ -331,7 +342,7 @@ function editSched(id, vid) {
     ${id ? `<button class="btn2" data-act="addService" data-vid="${it.vid}" data-sched="${id}">Log this service now</button><button class="btn2 danger" data-act="delSched" data-id="${id}">Delete item</button>` : ''}`);
 }
 function saveSched(id, vid) {
-  const name = sv('#sName'); if (!name) { toast('Name the item'); return; }
+  const name = sv('#sName'); if (!name) { warn('Name the item'); return; }
   let it = id && DATA.schedule.find(s => s.id === id);
   if (!it) { it = {id: uid('s'), vid}; DATA.schedule.push(it); }
   Object.assign(it, {name, everyMi: num(sv('#sMi')), everyMo: num(sv('#sMo')), action: sv('#sAct'), lastMi: num(sv('#sLMi')), lastDate: sv('#sLD') || null, source: sv('#sSrc')});
@@ -356,18 +367,22 @@ function editService(id, vid, schedId) {
     ${id ? `<button class="btn2 danger" data-act="delService" data-id="${id}">Delete record</button>` : ''}`);
 }
 function saveService(id, vid) {
-  const title = sv('#mTitle'); if (!title) { toast('Describe the work'); return; }
+  const title = sv('#mTitle'); if (!title) { warn('Describe the work'); return; }
   let s = id && DATA.services.find(x => x.id === id);
   if (!s) { s = {id: uid('m'), vid, projectId: null}; DATA.services.push(s); }
   Object.assign(s, {title, date: sv('#mDate') || null, odo: num(sv('#mOdo')), type: sv('#mType'), doneBy: sv('#mBy'), parts: num(sv('#mParts')), labor: num(sv('#mLabor')),
     notes: sv('#mNotes'), scheduleId: $('#mSched', $('#sheet')) ? sv('#mSched') || null : s.scheduleId || null});
+  let cleared = false;
   if (s.scheduleId) {
     const it = DATA.schedule.find(x => x.id === s.scheduleId);
+    const before = it ? schedStatus(it, currentOdo(it.vid)).state : null;
     if (it && ((s.odo != null && (it.lastMi == null || s.odo >= it.lastMi)) || (s.date && (!it.lastDate || s.date >= it.lastDate)))) {
       if (s.odo != null) it.lastMi = s.odo; if (s.date) it.lastDate = s.date;
     }
+    cleared = it && ['overdue', 'soon', 'none'].includes(before) && schedStatus(it, currentOdo(it.vid)).state === 'ok';
   }
-  save(); closeSheet(); render(); toast('Service logged');
+  save(); closeSheet(); render();
+  if (cleared) { Haptics.success(); toast(`Service logged · ${DATA.schedule.find(x => x.id === s.scheduleId).name} is current`); } else toast('Service logged');
 }
 function specLists(vid, v) {
   const all = (v.specs || []).map((s, i) => ({s, i}));
@@ -470,22 +485,81 @@ function projectNotes(id) {
   return `<div class="lbl">Log notes · ${l.length}</div>` + l.map(x => `<div class="entry" style="cursor:default"><div class="date-chip">${x.date ? fmtDate(x.date) : '—'}</div><div class="grow"><div class="n" style="margin:0">${esc(x.note || x.tags.join(', '))}</div><div class="s">${x.odo != null ? fmtMi(x.odo) + ' mi' : ''}</div></div></div>`).join('');
 }
 const GRIP = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
-const grip = (list, i, n, what) => `<span class="grip" role="button" tabindex="0" data-list="${list}" data-i="${i}" aria-label="Reorder ${esc(what || list)}: press and hold, then drag. Arrow keys also move it." aria-roledescription="drag handle" title="Press and hold to drag">${GRIP}</span>`;
+const grip = (list, i, n, what) => `<span class="grip" role="button" tabindex="0" data-list="${list}" data-i="${i}" aria-label="${esc(what || list)}: press and hold to drag. Arrow keys move it; Delete removes it." aria-roledescription="drag handle" title="Press and hold to drag">${GRIP}</span>`;
 function paintPDraft() {
   const pb = $('#jParts'), tb = $('#jTasks'); if (!pb) return;
-  pb.innerHTML = PDRAFT.parts.map((x, i) => `<div class="row-edit parts"><button class="box ${x.have ? 'on' : ''}" data-act="pPartHave" data-i="${i}" aria-label="Have this part" aria-pressed="${!!x.have}">${x.have ? IC.check : ''}</button>
+  pb.innerHTML = PDRAFT.parts.map((x, i) => `<div class="swipe-row" data-list="parts" data-i="${i}">${SWIPE_BG}<div class="row-edit parts"><button class="box ${x.have ? 'on' : ''}" data-act="pPartHave" data-i="${i}" aria-label="Have this part" aria-pressed="${!!x.have}">${x.have ? IC.check : ''}</button>
     <input class="fld txt" data-pp="name" data-i="${i}" value="${esc(x.name)}" placeholder="Part" aria-label="Part name">
     <input class="fld" data-pp="cost" data-i="${i}" value="${x.cost ?? ''}" inputmode="decimal" placeholder="$" aria-label="Cost">
-    ${grip('parts', i, PDRAFT.parts.length, x.name || 'part')}
-    <button class="x" data-act="pDelPart" data-i="${i}" aria-label="Remove part">${IC.x}</button></div>`).join('');
-  tb.innerHTML = PDRAFT.tasks.map((t, i) => `<div class="row-edit tasks"><button class="box ${t.done ? 'on' : ''}" data-act="pTaskDone" data-i="${i}" aria-label="Task done" aria-pressed="${!!t.done}">${t.done ? IC.check : ''}</button>
+    ${grip('parts', i, PDRAFT.parts.length, x.name || 'part')}</div></div>`).join('');
+  tb.innerHTML = PDRAFT.tasks.map((t, i) => `<div class="swipe-row" data-list="tasks" data-i="${i}">${SWIPE_BG}<div class="row-edit tasks"><button class="box ${t.done ? 'on' : ''}" data-act="pTaskDone" data-i="${i}" aria-label="Task done" aria-pressed="${!!t.done}">${t.done ? IC.check : ''}</button>
     <input class="fld txt" data-pt="t" data-i="${i}" value="${esc(t.t)}" placeholder="Task" aria-label="Task">
-    ${grip('tasks', i, PDRAFT.tasks.length, t.t || 'task')}
-    <button class="x" data-act="pDelTask" data-i="${i}" aria-label="Remove task">${IC.x}</button></div>`).join('');
+    ${grip('tasks', i, PDRAFT.tasks.length, t.t || 'task')}</div></div>`).join('');
   $$('[data-pp]', pb).forEach(el => el.oninput = () => { const x = PDRAFT.parts[+el.dataset.i]; x[el.dataset.pp] = el.dataset.pp === 'cost' ? num(el.value) : el.value; });
   $$('[data-pt]', tb).forEach(el => el.oninput = () => { PDRAFT.tasks[+el.dataset.i].t = el.value; });
   $$('.grip', pb).concat($$('.grip', tb)).forEach(wireGrip);
+  $$('.swipe-row', pb).concat($$('.swipe-row', tb)).forEach(wireSwipe);
 }
+/* ---------- swipe left to delete (parts / tasks) ----------
+   Drag a row right-to-left: a red Delete banner shows behind it. Past halfway the banner arms
+   ("Release to delete", haptic tick). Release armed = delete (with Undo); otherwise it snaps back. */
+const TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
+const SWIPE_BG = `<div class="swipe-bg" aria-hidden="true"><span class="swipe-lbl">${TRASH} <b>Delete</b></span></div>`;
+function removeItem(list, i) {
+  const arr = PDRAFT[list]; if (!arr[i]) return;
+  const [it] = arr.splice(i, 1); paintPDraft(); Haptics.success();
+  const what = (list === 'tasks' ? it.t : it.name) || (list === 'tasks' ? 'Task' : 'Part');
+  toast(`Deleted “${what.length > 24 ? what.slice(0, 23) + '…' : what}”`, {label: 'Undo', run: () => {
+    if (!$('#sheet').classList.contains('open') || !PDRAFT) return;
+    PDRAFT[list].splice(Math.min(i, PDRAFT[list].length), 0, it); paintPDraft();
+  }});
+}
+function wireSwipe(rowWrap) {
+  const fg = rowWrap.querySelector('.row-edit'), bg = rowWrap.querySelector('.swipe-bg'), lbl = bg.querySelector('b');
+  const list = rowWrap.dataset.list, i = +rowWrap.dataset.i;
+  let x0 = null, y0 = 0, dx = 0, mode = null, armed = false, w = 0, justSwiped = false;
+  rowWrap.addEventListener('click', e => { if (justSwiped) { e.stopPropagation(); e.preventDefault(); } }, true);   // a swipe that ends on the checkbox must not toggle it
+  rowWrap.addEventListener('pointerdown', e => {
+    if (e.button > 0 || $('.sorting')) return;          // a quick sideways move on the handle is a swipe; a hold is a reorder
+    x0 = e.clientX; y0 = e.clientY; dx = 0; mode = null; armed = false; w = rowWrap.offsetWidth;
+  });
+  rowWrap.addEventListener('pointermove', e => {
+    if (x0 == null) return;
+    const mx = e.clientX - x0, my = e.clientY - y0;
+    if (!mode) {
+      if (Math.abs(mx) < 10 && Math.abs(my) < 10) return;
+      mode = (!$('.sorting') && mx < 0 && Math.abs(mx) > Math.abs(my) * 1.2) ? 'swipe' : 'none';      // left & mostly horizontal, not mid-reorder
+      if (mode !== 'swipe') { x0 = null; return; }
+      try { rowWrap.setPointerCapture(e.pointerId); } catch (_) {}
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      rowWrap.classList.add('swiping'); fg.style.transition = 'none';
+    }
+    dx = Math.min(0, mx);
+    fg.style.transform = `translateX(${dx}px)`;
+    const nowArmed = -dx > w * 0.5;
+    if (nowArmed !== armed) {
+      armed = nowArmed; rowWrap.classList.toggle('armed', armed);
+      lbl.textContent = armed ? 'Release to delete' : 'Delete';
+      if (armed) Haptics.threshold();
+    }
+  });
+  const end = () => {
+    if (x0 == null) return; x0 = null;
+    if (mode !== 'swipe') return;
+    justSwiped = true; setTimeout(() => { justSwiped = false; }, 350);
+    fg.style.transition = '';
+    if (armed) {
+      fg.style.transform = `translateX(${-w - 20}px)`;
+      rowWrap.style.height = rowWrap.offsetHeight + 'px';
+      requestAnimationFrame(() => rowWrap.classList.add('collapsing'));
+      setTimeout(() => removeItem(list, i), 220);
+    } else {
+      fg.style.transform = ''; rowWrap.classList.remove('swiping', 'armed'); lbl.textContent = 'Delete';
+    }
+  };
+  rowWrap.addEventListener('pointerup', end); rowWrap.addEventListener('pointercancel', end);
+}
+
 /* ---------- press-and-hold to reorder (parts / tasks) ---------- */
 function moveItem(list, from, to) {
   const arr = PDRAFT[list]; if (to < 0 || to >= arr.length || to === from) return false;
@@ -493,7 +567,8 @@ function moveItem(list, from, to) {
 }
 function wireGrip(g) {
   const list = g.dataset.list, i = +g.dataset.i;
-  g.addEventListener('keydown', e => {                       // keyboard: arrow keys move the item
+  g.addEventListener('keydown', e => {                       // keyboard: arrow keys move the item, Delete removes it
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeItem(list, i); const ng = $(`.grip[data-list="${list}"][data-i="${Math.max(0, i - 1)}"]`); if (ng) ng.focus(); return; }
     const to = e.key === 'ArrowUp' ? i - 1 : e.key === 'ArrowDown' ? i + 1 : null;
     if (to == null) return; e.preventDefault();
     if (moveItem(list, i, to)) { paintPDraft(); const ng = $(`.grip[data-list="${list}"][data-i="${to}"]`); if (ng) ng.focus(); }
@@ -501,26 +576,27 @@ function wireGrip(g) {
   g.addEventListener('pointerdown', e => {
     if (e.button > 0) return;
     e.preventDefault();
-    const sh = $('#sheet'), row = g.closest('.row-edit'), box = row.parentElement;
-    const startY = e.clientY, startScroll = sh.scrollTop;
+    const sh = $('#sheet'), row = g.closest('.swipe-row'), box = row.parentElement;
+    const startY = e.clientY, startX = e.clientX, startScroll = sh.scrollTop;
     let started = false, cur = i, rows, step;
     try { g.setPointerCapture(e.pointerId); } catch (_) {}
     const begin = () => {
-      started = true; rows = $$('.row-edit', box);
+      started = true; rows = $$('.swipe-row', box);
       step = rows.length > 1 ? rows[1].getBoundingClientRect().top - rows[0].getBoundingClientRect().top : row.offsetHeight + 8;
       row.classList.add('dragging'); box.classList.add('sorting');
-      if (navigator.vibrate) navigator.vibrate(12);
+      Haptics.tap();
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     };
     const timer = setTimeout(begin, e.pointerType === 'mouse' ? 120 : 260);   // the "hold"
     const move = ev => {
-      if (!started) { if (Math.abs(ev.clientY - startY) > 10) finish(false); return; }
+      if (!started) { if (Math.abs(ev.clientY - startY) > 10 || Math.abs(ev.clientX - startX) > 10) finish(false); return; }   // moved before the hold: not a reorder
       ev.preventDefault();
       const r = sh.getBoundingClientRect();                  // auto-scroll near the sheet edges
       if (ev.clientY < r.top + 70) sh.scrollTop -= 10; else if (ev.clientY > window.innerHeight - 70) sh.scrollTop += 10;
       const dy = ev.clientY - startY + (sh.scrollTop - startScroll);
       row.style.transform = `translateY(${dy}px)`;
-      cur = Math.max(0, Math.min(rows.length - 1, i + Math.round(dy / step)));
+      const nc = Math.max(0, Math.min(rows.length - 1, i + Math.round(dy / step)));
+      if (nc !== cur) { cur = nc; Haptics.step(); }
       rows.forEach((rw, j) => {
         if (j === i) return;
         const s = (i < cur && j > i && j <= cur) ? -step : (i > cur && j < i && j >= cur) ? step : 0;
@@ -547,7 +623,7 @@ function collectProject() {
   return PDRAFT;
 }
 function saveProject(id) {
-  const d = collectProject(); if (!d.title) { toast('Give it a title'); return null; }
+  const d = collectProject(); if (!d.title) { warn('Give it a title'); return null; }
   let p = id && DATA.projects.find(x => x.id === id);
   if (!p) { p = {id: uid('p'), createdAt: today(), doneAt: null, order: DATA.projects.length}; DATA.projects.push(p); }
   Object.assign(p, d, {id: p.id});
@@ -563,7 +639,7 @@ function finishProject(id) {
     DATA.services.push({id: uid('m'), vid: p.vid, date: today(), odo: currentOdo(p.vid), title: p.title, type: p.category === 'Repair' ? 'Other' : 'Project / Mod',
       parts: cost || null, labor: null, doneBy: 'DIY', notes: [p.notes, (p.parts || []).map(x => x.name).join(', ')].filter(Boolean).join(' · '), scheduleId: null, projectId: p.id});
   }
-  save(); closeSheet(); render(); toast('Project done');
+  save(); closeSheet(); render(); Haptics.success(); toast('Project done');
 }
 
 /* ============================================================
@@ -650,7 +726,7 @@ function editVehicle(vid) {
     sh => { $('#vPhoto', sh).onchange = async e => { const f = e.target.files[0]; if (!f) return; try { NEWPHOTO = await shrinkImage(f); $('#vPhotoPrev', sh).innerHTML = `<img src="${NEWPHOTO}" alt="">`; } catch (er) { toast('Could not read that image'); } }; });
 }
 function saveVehicle(vid) {
-  const nick = sv('#vNick'), model = sv('#vModel'); if (!nick && !model) { toast('Add a name or model'); return; }
+  const nick = sv('#vNick'), model = sv('#vModel'); if (!nick && !model) { warn('Add a name or model'); return; }
   let v = vid && V(vid);
   if (!v) { v = {id: uid('v'), specs: [['Engine oil', ''], ['Oil filter', ''], ['Tire size', ''], ['Wipers (D / P)', '']], docs: {}, order: DATA.vehicles.length, photo: null}; DATA.vehicles.push(v); }
   Object.assign(v, {nickname: nick, year: num(sv('#vYear')), make: sv('#vMake'), model, trim: sv('#vTrim'), transmission: sv('#vTrans'), plate: sv('#vPlate').toUpperCase(),
@@ -689,6 +765,9 @@ function openSettings() {
     <div class="g2"><div class="field"><label class="lbl" for="aMi">Due soon within mi</label><input id="aMi" class="fld" inputmode="numeric" value="${DATA.settings.dueSoonMi}"></div>
       <div class="field"><label class="lbl" for="aDays">…or days</label><input id="aDays" class="fld" inputmode="numeric" value="${DATA.settings.dueSoonDays}"></div></div>
     <button class="btn2" data-act="saveAlerts">Save alert thresholds</button>
+    <div class="lbl" style="margin-top:8px">This device</div>
+    <div class="switchrow"><div>Haptic feedback<span class="s">Ticks when you cross a line or finish something. On iPhone this is a light system tick.</span></div>
+      <button class="switch" role="switch" id="hapOn" aria-checked="${Haptics.enabled()}" aria-label="Haptic feedback" data-act="toggleHaptics"></button></div>
     <div class="lbl" style="margin-top:8px">Backup file</div>
     <div class="g2"><button class="btn2" data-act="exportJSON">Export JSON</button><button class="btn2" data-act="importJSON">Import JSON</button></div>
     <p class="help faint" style="text-align:center">The Garage v${APP_VERSION}</p>`);
@@ -696,7 +775,7 @@ function openSettings() {
 }
 async function doConnect() {
   const tok = sv('#cTok'), owner = sv('#cOwner'), repo = sv('#cRepo');
-  if (!tok || !owner || !repo) { toast('Fill in owner, repo and token'); return; }
+  if (!tok || !owner || !repo) { warn('Fill in owner, repo and token'); return; }
   const btn = $('[data-act=connect]', $('#sheet')); btn.disabled = true; btn.textContent = 'CONNECTING…';
   try {
     const {remote} = await Cloud.connect(tok, owner, repo);
@@ -733,14 +812,15 @@ function flashCard(id) {
 /* ---------- sheet: pull down to dismiss ---------- */
 (function sheetDrag() {
   const sh = $('#sheet'), scrim = $('#scrim');
-  let y0 = null, dy = 0, dragging = false, samples = [];
+  let y0 = null, dy = 0, dragging = false, samples = [], armed = false;
+  const limit = () => Math.min(140, sh.offsetHeight * 0.25);
   sh.addEventListener('touchstart', e => {
     if (!sh.classList.contains('open') || e.touches.length > 1) { y0 = null; return; }
     const onHandle = !!e.target.closest('.grab-zone');
     // From the body, only start a pull when the sheet is scrolled to the top and the finger isn't in a text box.
-    if (e.target.closest('.grip')) { y0 = null; return; }   // reorder handles own their touches
+    if (e.target.closest('.grip, .swipe-row')) { y0 = null; return; }   // reorder handles and swipe rows own their touches
     if (!onHandle && (sh.scrollTop > 0 || e.target.closest('textarea, select'))) { y0 = null; return; }
-    y0 = e.touches[0].clientY; dy = 0; dragging = false; samples = [];
+    y0 = e.touches[0].clientY; dy = 0; dragging = false; samples = []; armed = false;
   }, {passive: true});
   sh.addEventListener('touchmove', e => {
     if (y0 == null) return;
@@ -754,6 +834,8 @@ function flashCard(id) {
     dy = Math.max(0, d - 8);
     const now = performance.now(); samples.push([now, dy]); while (samples.length > 2 && now - samples[0][0] > 120) samples.shift();
     sh.style.transform = `translateY(${dy}px)`;
+    const nowArmed = dy > limit();
+    if (nowArmed !== armed) { armed = nowArmed; sh.classList.toggle('will-close', armed); if (armed) Haptics.threshold(); }
     scrim.style.opacity = String(Math.max(0, 1 - dy / (sh.offsetHeight * 0.9)));
   }, {passive: false});
   const end = () => {
@@ -762,7 +844,8 @@ function flashCard(id) {
     // release velocity over the last ~120 ms (a flick after a pause still counts)
     const s0 = samples[0], v = s0 ? (dy - s0[1]) / Math.max(16, performance.now() - s0[0]) : 0;   // px per ms
     sh.style.transition = ''; scrim.style.transition = ''; scrim.style.opacity = '';
-    if (dy > Math.min(140, sh.offsetHeight * 0.25) || (v > 0.45 && dy > 24)) closeSheet();
+    sh.classList.remove('will-close'); armed = false;
+    if (dy > limit() || (v > 0.45 && dy > 24)) closeSheet();
     sh.style.transform = '';                                 // animates to closed (class) or back open
   };
   sh.addEventListener('touchend', end); sh.addEventListener('touchcancel', end);
@@ -799,7 +882,7 @@ const ACT = {
   addService: d => editService(null, d.vid, d.sched), editService: d => editService(d.id), saveService: d => saveService(d.id, d.vid),
   delService: d => { if (!confirm('Delete this record?')) return; DATA.services = DATA.services.filter(x => x.id !== d.id); save(); closeSheet(); render(); },
   editSpec: d => editSpec(d.vid, +d.i),
-  saveSpec: d => { const v = V(d.vid), k = sv('#pK'), val = sv('#pV'); if (!k) { toast('Add a label'); return; } const src = sv('#pS'); const q = $('#pQ', $('#sheet')).getAttribute('aria-checked') === 'true'; const row = [k, val, src, q]; v.specs = v.specs || []; if (+d.i >= 0) v.specs[+d.i] = row; else v.specs.push(row); save(); closeSheet(); render(); },
+  saveSpec: d => { const v = V(d.vid), k = sv('#pK'), val = sv('#pV'); if (!k) { warn('Add a label'); return; } const src = sv('#pS'); const q = $('#pQ', $('#sheet')).getAttribute('aria-checked') === 'true'; const row = [k, val, src, q]; v.specs = v.specs || []; if (+d.i >= 0) v.specs[+d.i] = row; else v.specs.push(row); save(); closeSheet(); render(); },
   delSpec: d => { V(d.vid).specs.splice(+d.i, 1); save(); closeSheet(); render(); },
   toggleSpecs: (d, el) => { UI.moreSpecs = !UI.moreSpecs; el.setAttribute('aria-expanded', UI.moreSpecs); $('#moreSpecs').classList.toggle('hidden', !UI.moreSpecs); },
   editDocs: d => editDocs(d.vid),
@@ -815,9 +898,8 @@ const ACT = {
   delProject: d => { if (!confirm('Delete this project?')) return; DATA.projects = DATA.projects.filter(x => x.id !== d.id); DATA.logs.forEach(l => { if (l.projectId === d.id) l.projectId = null; }); save(); closeSheet(); render(); },
   pAddPart: () => { collectProject(); PDRAFT.parts.push({name: '', cost: null, have: false, date: null}); paintPDraft(); const ins = $$('[data-pp=name]'); ins[ins.length - 1].focus(); },
   pAddTask: () => { collectProject(); PDRAFT.tasks.push({t: '', done: false}); paintPDraft(); const ins = $$('[data-pt=t]'); ins[ins.length - 1].focus(); },
-  pPartHave: d => { const x = PDRAFT.parts[+d.i]; x.have = !x.have; if (x.have && !x.date) x.date = today(); paintPDraft(); },
-  pTaskDone: d => { const t = PDRAFT.tasks[+d.i]; t.done = !t.done; paintPDraft(); },
-  pDelPart: d => { PDRAFT.parts.splice(+d.i, 1); paintPDraft(); }, pDelTask: d => { PDRAFT.tasks.splice(+d.i, 1); paintPDraft(); },
+  pPartHave: d => { const x = PDRAFT.parts[+d.i]; x.have = !x.have; if (x.have && !x.date) x.date = today(); if (x.have) Haptics.success(); paintPDraft(); },
+  pTaskDone: d => { const t = PDRAFT.tasks[+d.i]; t.done = !t.done; if (t.done) Haptics.success(); paintPDraft(); },
   // stats
   range: d => { UI.range = d.k; render(); },
   // settings
@@ -826,6 +908,7 @@ const ACT = {
   disconnect: () => { if (!confirm('Disconnect sync? Your repo is untouched; the token is removed from this device.')) return; Cloud.disconnect(); openSettings(); },
   copySnap: () => navigator.clipboard.writeText(buildSnapshot()).then(() => toast('Snapshot copied')),
   saveAlerts: () => { DATA.settings.dueSoonMi = num(sv('#aMi')) ?? 500; DATA.settings.dueSoonDays = num(sv('#aDays')) ?? 30; save(); render(); toast('Saved'); },
+  toggleHaptics: (d, el) => { const on = el.getAttribute('aria-checked') !== 'true'; Haptics.setEnabled(on); el.setAttribute('aria-checked', on); if (on) Haptics.tap(); },
   exportJSON, importJSON,
 };
 document.addEventListener('click', e => {

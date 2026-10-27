@@ -85,6 +85,17 @@ async function touchDrag(cdp, page, x, y, dy, {hold = 0, steps = 10, stepMs = 20
   await page.waitForTimeout(400);
 }
 
+/** Horizontal (or any-direction) touch drag: press at (x, y), move by (dx, dy) in steps, release. */
+async function touchSwipe(cdp, page, x, y, dx, {dy = 0, hold = 0, steps = 12, stepMs = 18, beforeRelease, path} = {}) {
+  await cdp.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x, y}]});
+  if (hold) await page.waitForTimeout(hold);
+  const pts = path || Array.from({length: steps}, (_, k) => [dx * (k + 1) / steps, dy * (k + 1) / steps]);
+  for (const [mx, my] of pts) { await cdp.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: x + mx, y: y + my}]}); await page.waitForTimeout(stepMs); }
+  if (beforeRelease) await beforeRelease();
+  await cdp.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+  await page.waitForTimeout(450);
+}
+
 const shot = (page, name, full = true) => page.screenshot({path: path.join(OUT, name + '.png'), fullPage: full});
 
-module.exports = {ROOT, OUT, fixture, serve, newPage, loadData, mockGitHub, connect, touchDrag, shot, b64, unb64};
+module.exports = {ROOT, OUT, fixture, serve, newPage, loadData, mockGitHub, connect, touchDrag, touchSwipe, shot, b64, unb64};
