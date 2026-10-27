@@ -10,6 +10,7 @@ module.exports = async ({browser, base, check}) => {
 
   await connect(page);
   check(await page.evaluate(() => DATA.vehicles.length) === 3, 'connect on an empty device pulls the repo');
+  check(JSON.stringify(await page.$$eval('.vcard .plate, .vrow .plate', ps => ps.map(p => p.textContent))) === JSON.stringify(['ROCI000', 'CAMRY00', 'JEEP000']), 'every vehicle card shows its plate');
   await shot(page, 'core-01-home');
 
   await page.click('[data-act=openV][data-vid=v-roci]');

@@ -2,7 +2,7 @@
 /* ============================================================
    THE GARAGE — core: utils, storage, calculations, sync, snapshot
    ============================================================ */
-const APP_VERSION = '1.5.2';
+const APP_VERSION = '1.5.3';
 
 /* ---------- utils ---------- */
 const $ = (s, r = document) => r.querySelector(s);

@@ -104,7 +104,8 @@ function renderHome() {
       <div class="chips">${vehicleChips(first.id)}</div></div></button>`;
   const rows = rest.map(v => `<button class="vrow" data-act="openV" data-vid="${v.id}">
     <div class="thumb">${PHOTOS[v.id] ? `<img src="${PHOTOS[v.id]}" alt="">` : IC.car.replace('64', '36').replace('40', '24')}</div>
-    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><div class="nm">${esc(vName(v))}</div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="nm" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(vName(v))}</div>${v.plate ? `<span class="plate">${esc(v.plate)}</span>` : ''}</div>
       <div class="meta">${v.nickname ? esc(`${v.year || ''} ${v.make || ''} ${v.model || ''}`.trim()) + ' · ' : ''}${fmtMi(currentOdo(v.id))} mi</div>
       <div class="chips">${vehicleChips(v.id)}</div></div>${IC.chev}</button>`).join('');
   return `<div class="home wrap">${head}${big}${rows}<button class="dashed" data-act="addVehicle">${IC.plus} REGISTER VEHICLE</button></div>`;
