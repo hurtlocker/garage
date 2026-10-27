@@ -1,0 +1,1045 @@
+{
+ "app": "Garage",
+ "version": 1,
+ "updatedAt": "2026-10-25T22:00:00.000Z",
+ "vehicles": [
+  {
+   "id": "v-roci",
+   "nickname": "Rocinante",
+   "short": "Roci",
+   "year": 2011,
+   "make": "Subaru",
+   "model": "Impreza",
+   "trim": "2.5i Premium",
+   "body": "Sedan",
+   "transmission": "5-speed manual",
+   "plate": "ROCI000",
+   "vin": "TESTVIN00000ROCI1",
+   "status": "Active",
+   "purchaseDate": "2026-10-10",
+   "purchaseMi": 124172,
+   "photo": null,
+   "order": 0,
+   "specs": [
+    [
+     "Engine",
+     "EJ253 2.5L SOHC flat-4"
+    ],
+    [
+     "Engine oil",
+     "5W-30 preferred (ILSAC GF-4 / API SM) \u00b7 4.2 qt"
+    ],
+    [
+     "Oil filter",
+     ""
+    ],
+    [
+     "Oil change interval",
+     "5,000 mi"
+    ],
+    [
+     "MT gear oil",
+     "API GL-5 \u00b7 3.7 qt (5-speed)"
+    ],
+    [
+     "Rear diff oil",
+     "API GL-5 \u00b7 0.8 qt"
+    ],
+    [
+     "Coolant",
+     "Subaru Super Coolant \u00b7 7.2 qt"
+    ],
+    [
+     "Spark plugs",
+     "NGK FR5AP-11"
+    ],
+    [
+     "Battery",
+     "55D23L (12V 48Ah)"
+    ],
+    [
+     "Fuel tank",
+     "16.9 gal \u00b7 regular unleaded"
+    ],
+    [
+     "Tire size",
+     ""
+    ],
+    [
+     "Tire pressure",
+     ""
+    ],
+    [
+     "Wipers (D / P)",
+     ""
+    ]
+   ],
+   "docs": {
+    "insurer": "",
+    "policy": "",
+    "insuranceRenews": "",
+    "registrationExpires": "",
+    "title": "",
+    "notes": ""
+   }
+  },
+  {
+   "id": "v-camry",
+   "nickname": "",
+   "short": "Camry",
+   "year": 2011,
+   "make": "Toyota",
+   "model": "Camry",
+   "trim": "LE",
+   "body": "Sedan",
+   "transmission": "Automatic",
+   "plate": "CAMRY00",
+   "vin": "",
+   "status": "Active",
+   "purchaseDate": "",
+   "purchaseMi": null,
+   "photo": null,
+   "order": 1,
+   "specs": [
+    [
+     "Engine oil",
+     "0W-20 synthetic \u00b7 5 qt"
+    ],
+    [
+     "Oil filter",
+     ""
+    ],
+    [
+     "Oil change interval",
+     "5,000 mi"
+    ],
+    [
+     "Tire size",
+     ""
+    ],
+    [
+     "Wipers (D / P)",
+     ""
+    ]
+   ],
+   "docs": {
+    "insurer": "",
+    "policy": "",
+    "insuranceRenews": "",
+    "registrationExpires": "",
+    "title": "",
+    "notes": ""
+   }
+  },
+  {
+   "id": "v-compass",
+   "nickname": "Vivian",
+   "short": "Vivian",
+   "year": 2017,
+   "make": "Jeep",
+   "model": "Compass",
+   "trim": "Sport",
+   "body": "SUV",
+   "transmission": "Manual",
+   "plate": "JEEP000",
+   "vin": "TESTVIN000COMPASS",
+   "status": "Active",
+   "purchaseDate": "",
+   "purchaseMi": null,
+   "photo": null,
+   "order": 2,
+   "specs": [
+    [
+     "Engine oil",
+     "0W-20 synthetic \u00b7 5 qt"
+    ],
+    [
+     "Oil filter",
+     ""
+    ],
+    [
+     "Oil change interval",
+     "5,000 mi"
+    ],
+    [
+     "Tire size",
+     ""
+    ],
+    [
+     "Wipers (D / P)",
+     "22\" / 20\""
+    ]
+   ],
+   "docs": {
+    "insurer": "",
+    "policy": "",
+    "insuranceRenews": "",
+    "registrationExpires": "",
+    "title": "",
+    "notes": ""
+   }
+  }
+ ],
+ "logs": [
+  {
+   "id": "l-000",
+   "vid": "v-roci",
+   "date": "2026-10-10",
+   "odo": 124172,
+   "fuel": null,
+   "note": "Purchased. Baseline odometer.",
+   "tags": [
+    "Baseline"
+   ],
+   "projectId": null
+  },
+  {
+   "id": "l-001",
+   "vid": "v-camry",
+   "date": "2026-04-09",
+   "odo": 181122,
+   "fuel": null,
+   "note": "Last known odometer (from Service Log).",
+   "tags": [
+    "Baseline"
+   ],
+   "projectId": null
+  },
+  {
+   "id": "l-002",
+   "vid": "v-compass",
+   "date": "2025-11-03",
+   "odo": 120012,
+   "fuel": null,
+   "note": "Last known odometer (from Service Log).",
+   "tags": [
+    "Baseline"
+   ],
+   "projectId": null
+  },
+  {
+   "id": "l-t000",
+   "vid": "v-camry",
+   "date": null,
+   "odo": null,
+   "fuel": null,
+   "note": "Trip: Pearl Harbor",
+   "tags": [
+    "Trip"
+   ],
+   "trip": {
+    "name": "Pearl Harbor",
+    "miles": null
+   },
+   "projectId": null
+  },
+  {
+   "id": "l-t001",
+   "vid": "v-camry",
+   "date": null,
+   "odo": null,
+   "fuel": null,
+   "note": "Trip: MW BDR 25",
+   "tags": [
+    "Trip"
+   ],
+   "trip": {
+    "name": "MW BDR 25",
+    "miles": null
+   },
+   "projectId": null
+  },
+  {
+   "id": "l-t002",
+   "vid": "v-camry",
+   "date": null,
+   "odo": null,
+   "fuel": null,
+   "note": "Trip: BHAM 25 \u00b7 1,100 mi",
+   "tags": [
+    "Trip"
+   ],
+   "trip": {
+    "name": "BHAM 25",
+    "miles": 1100
+   },
+   "projectId": null
+  },
+  {
+   "id": "l-t003",
+   "vid": "v-camry",
+   "date": null,
+   "odo": null,
+   "fuel": null,
+   "note": "Trip: Holiday Hash",
+   "tags": [
+    "Trip"
+   ],
+   "trip": {
+    "name": "Holiday Hash",
+    "miles": null
+   },
+   "projectId": null
+  }
+ ],
+ "schedule": [
+  {
+   "id": "s-r000",
+   "vid": "v-roci",
+   "name": "Oil & filter",
+   "everyMi": 5000,
+   "everyMo": 7.5,
+   "action": "replace",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "Your interval (factory: 7,500 mi / 7.5 mo)"
+  },
+  {
+   "id": "s-r001",
+   "vid": "v-roci",
+   "name": "Tire rotation",
+   "everyMi": 7500,
+   "everyMo": 7.5,
+   "action": "replace",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "2011 Subaru maintenance schedule (normal)"
+  },
+  {
+   "id": "s-r002",
+   "vid": "v-roci",
+   "name": "Cabin air filter",
+   "everyMi": 7500,
+   "everyMo": 12,
+   "action": "replace",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "2010 Impreza owner's manual p. 4-13"
+  },
+  {
+   "id": "s-r003",
+   "vid": "v-roci",
+   "name": "Brakes, clutch, steering & suspension, CV boots",
+   "everyMi": 15000,
+   "everyMo": 15,
+   "action": "inspect",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "2011 Subaru maintenance schedule (normal)"
+  },
+  {
+   "id": "s-r004",
+   "vid": "v-roci",
+   "name": "Engine air filter",
+   "everyMi": 30000,
+   "everyMo": 30,
+   "action": "replace",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "2011 Subaru maintenance schedule (normal)"
+  },
+  {
+   "id": "s-r005",
+   "vid": "v-roci",
+   "name": "Spark plugs (NGK FR5AP-11)",
+   "everyMi": 30000,
+   "everyMo": 30,
+   "action": "replace",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "2011 Subaru maintenance schedule (normal) \u00b7 Impreza 2.5"
+  },
+  {
+   "id": "s-r006",
+   "vid": "v-roci",
+   "name": "Brake fluid",
+   "everyMi": 30000,
+   "everyMo": 30,
+   "action": "replace",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "2011 Subaru maintenance schedule (normal)"
+  },
+  {
+   "id": "s-r007",
+   "vid": "v-roci",
+   "name": "MT gear oil (GL-5, 3.7 qt)",
+   "everyMi": 30000,
+   "everyMo": 30,
+   "action": "replace",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "2011 Subaru maintenance schedule (normal) \u00b7 severe-duty replace interval"
+  },
+  {
+   "id": "s-r008",
+   "vid": "v-roci",
+   "name": "Rear diff gear oil (GL-5, 0.8 qt)",
+   "everyMi": 30000,
+   "everyMo": 30,
+   "action": "replace",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "2011 Subaru maintenance schedule (normal) \u00b7 severe-duty replace interval"
+  },
+  {
+   "id": "s-r009",
+   "vid": "v-roci",
+   "name": "Fuel lines & connections",
+   "everyMi": 30000,
+   "everyMo": 30,
+   "action": "inspect",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "2011 Subaru maintenance schedule (normal)"
+  },
+  {
+   "id": "s-r010",
+   "vid": "v-roci",
+   "name": "Drive belts",
+   "everyMi": 60000,
+   "everyMo": 60,
+   "action": "replace",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "2011 Subaru maintenance schedule (normal)"
+  },
+  {
+   "id": "s-r011",
+   "vid": "v-roci",
+   "name": "Wheel bearings",
+   "everyMi": 60000,
+   "everyMo": 60,
+   "action": "inspect",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "2011 Subaru maintenance schedule (normal)"
+  },
+  {
+   "id": "s-r012",
+   "vid": "v-roci",
+   "name": "Fuel filter (in tank)",
+   "everyMi": 60000,
+   "everyMo": null,
+   "action": "replace",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "2011 Subaru maintenance schedule (normal)"
+  },
+  {
+   "id": "s-r013",
+   "vid": "v-roci",
+   "name": "Timing belt",
+   "everyMi": 105000,
+   "everyMo": null,
+   "action": "replace",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "2011 Subaru maintenance schedule (normal) \u00b7 confirm history: car is past 105k"
+  },
+  {
+   "id": "s-r014",
+   "vid": "v-roci",
+   "name": "Engine coolant (Subaru Super Coolant)",
+   "everyMi": 137500,
+   "everyMo": 132,
+   "action": "replace",
+   "lastMi": null,
+   "lastDate": null,
+   "source": "Owner's manual: 11 yr / 137,500 mi first change"
+  },
+  {
+   "id": "s-c000",
+   "vid": "v-camry",
+   "name": "Oil & filter",
+   "everyMi": 5000,
+   "everyMo": 6,
+   "action": "replace",
+   "lastMi": 181122,
+   "lastDate": "2026-04-09",
+   "source": "Your interval"
+  },
+  {
+   "id": "s-j000",
+   "vid": "v-compass",
+   "name": "Oil & filter",
+   "everyMi": 5000,
+   "everyMo": 6,
+   "action": "replace",
+   "lastMi": 120012,
+   "lastDate": "2025-11-03",
+   "source": "Your interval"
+  }
+ ],
+ "services": [
+  {
+   "id": "m-n000",
+   "vid": "v-compass",
+   "date": "2026-04-23",
+   "odo": null,
+   "title": "Mobile diagnostic",
+   "type": "Diagnostic",
+   "parts": 0,
+   "labor": 100,
+   "doneBy": "Mobile Mechanic",
+   "hours": null,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n001",
+   "vid": "v-camry",
+   "date": "2024-10-11",
+   "odo": 158715,
+   "title": "Oil change",
+   "type": "Oil Change",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n002",
+   "vid": "v-compass",
+   "date": null,
+   "odo": 119475,
+   "title": "Coolant tank + hose swap",
+   "type": "Cooling System",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n003",
+   "vid": "v-camry",
+   "date": null,
+   "odo": 181122,
+   "title": "Valve cover gasket replacement",
+   "type": "Engine",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n004",
+   "vid": "v-compass",
+   "date": null,
+   "odo": 108786,
+   "title": "Oil change",
+   "type": "Oil Change",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n005",
+   "vid": "v-compass",
+   "date": "2026-04-01",
+   "odo": null,
+   "title": "Coolant O-ring fix",
+   "type": "Cooling System",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n006",
+   "vid": "v-camry",
+   "date": "2025-01-27",
+   "odo": null,
+   "title": "Washer fluid",
+   "type": "Fluids",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n007",
+   "vid": "v-camry",
+   "date": "2026-04-09",
+   "odo": 181122,
+   "title": "Oil change",
+   "type": "Oil Change",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "",
+   "scheduleId": "s-c000",
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n008",
+   "vid": "v-camry",
+   "date": "2025-01-26",
+   "odo": null,
+   "title": "Key fob battery",
+   "type": "Battery",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n009",
+   "vid": "v-camry",
+   "date": null,
+   "odo": 181122,
+   "title": "Coolant fill",
+   "type": "Fluids",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n010",
+   "vid": "v-compass",
+   "date": "2026-04-25",
+   "odo": null,
+   "title": "Coolant hose + reservoir swap",
+   "type": "Cooling System",
+   "parts": 100,
+   "labor": null,
+   "doneBy": "",
+   "hours": 5.25,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n011",
+   "vid": "v-camry",
+   "date": null,
+   "odo": 181122,
+   "title": "Tire rotation",
+   "type": "Tires",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n012",
+   "vid": "v-compass",
+   "date": "2025-11-03",
+   "odo": 120012,
+   "title": "Oil change",
+   "type": "Oil Change",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "Mileage not recorded in Notion; back-calculated from old note (next change at 125,012 mi).",
+   "scheduleId": "s-j000",
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n013",
+   "vid": "v-camry",
+   "date": null,
+   "odo": 181122,
+   "title": "Spark plug replacement",
+   "type": "Engine",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n014",
+   "vid": "v-camry",
+   "date": null,
+   "odo": 158911,
+   "title": "Alternator replaced",
+   "type": "Electrical",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  },
+  {
+   "id": "m-n015",
+   "vid": "v-camry",
+   "date": "2024-12-15",
+   "odo": null,
+   "title": "Key fob battery",
+   "type": "Battery",
+   "parts": null,
+   "labor": null,
+   "doneBy": "",
+   "hours": null,
+   "notes": "",
+   "scheduleId": null,
+   "projectId": null,
+   "source": "notion"
+  }
+ ],
+ "projects": [
+  {
+   "title": "Fix fuel pump leak",
+   "category": "Repair",
+   "phase": "1 - Now",
+   "status": "To Do",
+   "priority": "High",
+   "notes": "Top priority \u2014 fire risk. Limit driving until fixed.",
+   "parts": [],
+   "tasks": [],
+   "watch": true,
+   "id": "p-000",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 0
+  },
+  {
+   "title": "Fix rear defogger",
+   "category": "Electrical",
+   "phase": "1 - Now",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "Test grid with multimeter; patch broken lines. Must be done BEFORE tint.",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-001",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 1
+  },
+  {
+   "title": "Lube sunroof seals",
+   "category": "Exterior",
+   "phase": "1 - Now",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "Before first freeze so seals don't stick/tear.",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-002",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 2
+  },
+  {
+   "title": "Acquire winter wheels + tires",
+   "category": "Purchase",
+   "phase": "1 - Now",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "Decide on Forester strut lift first \u2014 may want a slightly taller tire size.",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-003",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 3
+  },
+  {
+   "title": "Rain-X all exterior glass",
+   "category": "Glass",
+   "phase": "1 - Now",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-004",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 4
+  },
+  {
+   "title": "Buy sun shade",
+   "category": "Purchase",
+   "phase": "1 - Now",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-005",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 5
+  },
+  {
+   "title": "Fix sloppy shifter (linkage bushing)",
+   "category": "Interior",
+   "phase": "2 - Interior Weekend",
+   "status": "Parts In Hand",
+   "priority": "Normal",
+   "notes": "New linkage bushing purchased. Do with shift/handbrake boots.",
+   "parts": [
+    {
+     "name": "Shifter linkage bushing",
+     "cost": null,
+     "have": true
+    }
+   ],
+   "tasks": [],
+   "watch": false,
+   "id": "p-006",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 6
+  },
+  {
+   "title": "New shift + handbrake boot",
+   "category": "Interior",
+   "phase": "2 - Interior Weekend",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "Same teardown as shifter bushing.",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-007",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 7
+  },
+  {
+   "title": "Head unit wiring",
+   "category": "Electrical",
+   "phase": "2 - Interior Weekend",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "Batch all head-unit wiring in one session.",
+   "parts": [],
+   "tasks": [
+    {
+     "t": "Install backup camera",
+     "done": false
+    },
+    {
+     "t": "Wire steering wheel controls to head unit",
+     "done": false
+    },
+    {
+     "t": "Install CarPlay mic",
+     "done": false
+    }
+   ],
+   "watch": false,
+   "id": "p-008",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 8
+  },
+  {
+   "title": "Add footwell lights",
+   "category": "Electrical",
+   "phase": "2 - Interior Weekend",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-009",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 9
+  },
+  {
+   "title": "Design + 3D print center console cubby",
+   "category": "Interior",
+   "phase": "2 - Interior Weekend",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "Measure while console is out for the shifter job.",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-010",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 10
+  },
+  {
+   "title": "Swap to '08 Forester struts (1-2\" lift)",
+   "category": "Suspension",
+   "phase": "3 - Suspension",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "Get an alignment after.",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-011",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 11
+  },
+  {
+   "title": "Install mud flaps",
+   "category": "Exterior",
+   "phase": "3 - Suspension",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "After lift \u2014 clearance changes with ride height.",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-012",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 12
+  },
+  {
+   "title": "Tint windows",
+   "category": "Glass",
+   "phase": "4 - Spring",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "After defogger repair. Cures slowly in cold.",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-013",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 13
+  },
+  {
+   "title": "Anti-fog all interior glass",
+   "category": "Glass",
+   "phase": "4 - Spring",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "Wait ~1 week after tint before treating inside glass.",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-014",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 14
+  },
+  {
+   "title": "Exterior vinyl decals",
+   "category": "Exterior",
+   "phase": "4 - Spring",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "Vinyl adheres poorly below ~50\u00b0F unless in a heated garage.",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-015",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 15
+  },
+  {
+   "title": "Restore headlights",
+   "category": "Exterior",
+   "phase": "4 - Spring",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "Any time.",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-016",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 16
+  },
+  {
+   "title": "Buy side mirrors with turn signals",
+   "category": "Purchase",
+   "phase": "4 - Spring",
+   "status": "To Do",
+   "priority": "Normal",
+   "notes": "Any time.",
+   "parts": [],
+   "tasks": [],
+   "watch": false,
+   "id": "p-017",
+   "vid": "v-roci",
+   "createdAt": "2026-10-25",
+   "doneAt": null,
+   "order": 17
+  }
+ ],
+ "settings": {
+  "dueSoonMi": 500,
+  "dueSoonDays": 30
+ }
+}

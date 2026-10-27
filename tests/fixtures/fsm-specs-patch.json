@@ -1,0 +1,332 @@
+{
+ "id": "claude-2026-10-26-roci-fsm-specs",
+ "by": "claude",
+ "at": "2026-10-27T00:26:02Z",
+ "note": "Roci specs from the 2011 service manual (36 items, each with its page code). Fixes oil capacity to 4.4 qt with filter.",
+ "ops": [
+  {
+   "op": "delSpec",
+   "vid": "v-roci",
+   "key": "Engine"
+  },
+  {
+   "op": "delSpec",
+   "vid": "v-roci",
+   "key": "Engine oil"
+  },
+  {
+   "op": "delSpec",
+   "vid": "v-roci",
+   "key": "Oil filter"
+  },
+  {
+   "op": "delSpec",
+   "vid": "v-roci",
+   "key": "Oil change interval"
+  },
+  {
+   "op": "delSpec",
+   "vid": "v-roci",
+   "key": "MT gear oil"
+  },
+  {
+   "op": "delSpec",
+   "vid": "v-roci",
+   "key": "Rear diff oil"
+  },
+  {
+   "op": "delSpec",
+   "vid": "v-roci",
+   "key": "Coolant"
+  },
+  {
+   "op": "delSpec",
+   "vid": "v-roci",
+   "key": "Spark plugs"
+  },
+  {
+   "op": "delSpec",
+   "vid": "v-roci",
+   "key": "Battery"
+  },
+  {
+   "op": "delSpec",
+   "vid": "v-roci",
+   "key": "Fuel tank"
+  },
+  {
+   "op": "delSpec",
+   "vid": "v-roci",
+   "key": "Tire size"
+  },
+  {
+   "op": "delSpec",
+   "vid": "v-roci",
+   "key": "Tire pressure"
+  },
+  {
+   "op": "delSpec",
+   "vid": "v-roci",
+   "key": "Wipers (D / P)"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Engine",
+   "value": "EJ253 2.5L SOHC flat-4 · 170 hp @ 6,000 · 170 lb-ft @ 4,400",
+   "source": "FSM SPC-2, ID-5"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Firing order / idle",
+   "value": "1-3-2-4 · idle 650 rpm (MT)",
+   "source": "FSM SPC-2"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Engine oil",
+   "value": "5W-30 synthetic · API SN/SM or ILSAC GF-5/GF-4",
+   "source": "FSM RM-2"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Oil capacity",
+   "value": "4.4 US qt with filter · 4.2 qt oil only · 5.3 qt dry",
+   "source": "FSM SPC-4"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Oil filter",
+   "value": "Subaru 15208AA100 (black, 68 mm)",
+   "source": "Subaru parts catalog fitment (confirm by VIN); FSM PM-8 lists the black 68 mm type"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Oil filter install",
+   "value": "Black 68 mm: ~1 turn after seal contact or 14 N·m (10.3 ft-lb) · Blue 67.4 mm: ~7/8 turn or 12 N·m (8.9 ft-lb)",
+   "source": "FSM PM-8"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Oil drain plug",
+   "value": "44 N·m (32.5 ft-lb) · new gasket each change",
+   "source": "FSM PM-6, LU(H4SO)-9"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Oil change interval",
+   "value": "5,000 mi",
+   "source": "Your interval · FSM PM-3: 7,500 mi / 7.5 mo; severe use PM-5: 3,750 mi / 3.75 mo"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "MT gear oil",
+   "value": "API GL-5 75W-90 · 3.7 US qt (3.5 L) · fill via dipstick hole",
+   "source": "FSM RM-2, SPC-4, PM-20"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "MT drain plug",
+   "value": "TORX T70 · 44 N·m (32.5 ft-lb) aluminum gasket · 70 N·m (51.6 ft-lb) copper/metal gasket",
+   "source": "FSM PM-20, 5MT-22"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Rear diff oil",
+   "value": "API GL-5 75W-90 · 0.8 US qt · fill to bottom of filler hole",
+   "source": "FSM RM-2, PM-23, PM-24"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Rear diff plugs",
+   "value": "Drain & filler 49 N·m (36.2 ft-lb) · Three Bond 1105 on threads",
+   "source": "FSM PM-24"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Coolant",
+   "value": "Subaru Super Coolant · 7.2 US qt (6.8 L) · first change 11 yr / 137,500 mi, then every 6 yr / 75,000 mi",
+   "source": "FSM RM-4, SPC-4, PM-3"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Radiator cap",
+   "value": "Opens 93–123 kPa (14–18 psi) · replace below 83 kPa (12 psi)",
+   "source": "FSM PM-17"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Brake fluid",
+   "value": "DOT3 or DOT4 · full flush ≈ 0.5 L (17 fl oz) · bleeder 8 N·m (5.9 ft-lb)",
+   "source": "FSM RM-4, PM-27"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Clutch fluid",
+   "value": "DOT3 (DOT4 OK) · bleeder 7.8 N·m (5.8 ft-lb)",
+   "source": "FSM RM-4, CL-20"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Power steering fluid",
+   "value": "Subaru PS fluid or Dexron III · 0.7 US qt",
+   "source": "FSM RM-4, PM-37"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Spark plugs",
+   "value": "NGK FR5AP-11 · gap 1.0–1.1 mm (0.039–0.043 in) · 21 N·m (15.5 ft-lb)",
+   "source": "FSM IG(H4SO)-2, PM-9"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Battery",
+   "value": "55D23L · 12 V 48 Ah · 390 CCA",
+   "source": "FSM SPC-2"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Valve clearance",
+   "value": "Intake 0.20 ± 0.04 mm · Exhaust 0.25 ± 0.04 mm",
+   "source": "FSM ME(H4SO)-29"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Drive belt tension",
+   "value": "Front belt deflection at 22 lbf: 7–9 mm new / 9–11 mm used · rear (A/C) belt is stretch-type, no adjustment",
+   "source": "FSM PM-10"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Bulbs (W)",
+   "value": "Low 55 halogen · high 60 · front turn 27 · park 8 · fog 51 · tail/stop 5/21 · rear turn 21 · reverse 16 · plate 5",
+   "source": "FSM LI-2 (4-door)"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Cabin air filter",
+   "value": "Check every 12 mo / 7,500 mi · behind glove box",
+   "source": "FSM PM-3, PM-39"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Tire size",
+   "value": "P205/55 R16 89V · 16 × 6½JJ wheel · +55 mm offset · 5 × 100",
+   "source": "FSM WT-2"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Tire pressure",
+   "value": "33 psi front / 32 psi rear (cold) · spare T125/70 D17: 60 psi",
+   "source": "FSM WT-2"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Lug nuts",
+   "value": "100 N·m (73.8 ft-lb)",
+   "source": "FSM WT-4"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Brake pads",
+   "value": "Front 11 mm new, 1.5 mm limit · Rear 9 mm new, 1.5 mm limit",
+   "source": "FSM PM-28"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Brake rotors",
+   "value": "Front 24 mm (limit 22) · Rear 10 mm (limit 8.5) · runout ≤ 0.05 mm",
+   "source": "FSM PM-28"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Caliper bolts",
+   "value": "Caliper to support 27 N·m (19.9 ft-lb) · front support 80 N·m (59) · rear support 66 N·m (48.7)",
+   "source": "FSM BR-14, BR-16, BR-23"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Axle nuts",
+   "value": "Front 220 N·m (162.3 ft-lb) · Rear 190 N·m (140.1 ft-lb) · tighten before loading the wheel",
+   "source": "FSM DS-15, DS-21"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Strut fasteners",
+   "value": "Top mount to body 20 N·m (14.8 ft-lb), new self-locking nuts · strut to housing 155 N·m (114.3 ft-lb)",
+   "source": "FSM FS-22"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Alignment (front)",
+   "value": "Camber −0°10′ ± 0°45′ · caster 5°55′ · toe 0 ± 3 mm",
+   "source": "FSM FS-2"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Alignment (rear)",
+   "value": "Camber −1°05′ ± 0°45′ · toe 0 ± 3 mm · thrust 0° ± 0°30′",
+   "source": "FSM FS-2"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Stock wheel arch height",
+   "value": "Front 387 mm (15.2 in) · Rear 380 mm (15.0 in) · tolerance +12 / −24 mm",
+   "source": "FSM FS-2 (baseline before the strut lift)"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Gearing",
+   "value": "5MT · final drive 3.900 · rear diff code T1",
+   "source": "FSM SPC-3, ID-5"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Fuel tank",
+   "value": "16.9 US gal (64 L) · unleaded",
+   "source": "FSM SPC-4"
+  },
+  {
+   "op": "setSpec",
+   "vid": "v-roci",
+   "key": "Wipers (D / P)",
+   "value": "",
+   "source": "Not in the service manual; measure the blades"
+  }
+ ]
+}
