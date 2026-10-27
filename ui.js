@@ -292,7 +292,8 @@ function mxHistory(vid) {
       : '<div class="empty">No service records yet.</div>'}`;
 }
 function kv(k, v, act, data = '', copy, src) {
-  return `<div class="kvrow" style="padding-right:${copy ? 6 : 14}px"><button data-act="${act}" ${data} style="display:flex;justify-content:space-between;gap:12px;flex:1;min-width:0;text-align:left;min-height:28px;align-items:center">
+  const long = (v && String(v).length > 26) || (src && String(src).length > 34);                 // long values get their own full-width line under the label
+  return `<div class="kvrow ${long ? 'long' : ''}" style="padding-right:${copy ? 6 : 14}px"><button data-act="${act}" ${data} style="display:flex;justify-content:space-between;gap:12px;flex:1;min-width:0;text-align:left;min-height:28px;align-items:center">
     <span class="k">${esc(k)}</span><span class="v mono ${v ? '' : 'unset'}" style="${v ? '' : 'font-family:var(--sans)'}">${v ? esc(v) : 'Not set'}${src ? `<span class="faint" style="display:block;font-family:var(--sans);font-size:11px">${esc(src)}</span>` : ''}</span></button>
     ${copy && v ? `<button class="x" data-act="copy" data-v="${esc(v)}" aria-label="Copy ${esc(k)}">${IC.copy}</button>` : ''}</div>`;
 }

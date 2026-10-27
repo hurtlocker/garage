@@ -217,3 +217,7 @@ input[type=date].fld{font-family:var(--mono);font-size:16px}
    (pinch-zoom stays enabled for accessibility). */
 input,select,textarea{font-size:16px}
 @supports (-webkit-touch-callout:none){input:not([type=file]),select,textarea{font-size:max(16px,1em)}}
+
+.kvrow.long>button{flex-direction:column;align-items:flex-start!important;gap:4px!important;padding:2px 0}
+.kvrow.long .k{max-width:none}
+.kvrow.long .v{text-align:left;font-size:13.5px;line-height:1.45}
