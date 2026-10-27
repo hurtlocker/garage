@@ -162,7 +162,14 @@ input[type=date].fld{font-family:var(--mono);font-size:16px}
 .check{display:flex;align-items:center;gap:10px;font-size:14px;min-height:36px;width:100%;text-align:left}
 .box{width:20px;height:20px;flex:none;border-radius:5px;border:1.5px solid var(--line-hi);display:flex;align-items:center;justify-content:center}
 .box.on{background:var(--red);border-color:var(--red)}
-.row-edit{display:grid;grid-template-columns:28px minmax(0,1fr) 92px 36px;gap:8px;align-items:center}
+.row-edit{display:grid;grid-template-columns:28px minmax(0,1fr) 84px 32px 36px;gap:8px;align-items:center;position:relative;transition:transform .16s ease}
+.row-edit.tasks{grid-template-columns:28px minmax(0,1fr) 32px 36px}
+.grip{width:32px;height:42px;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);border-radius:8px;cursor:grab;
+  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.grip:active,.grip:focus-visible{color:var(--ink);background:var(--raised);outline:none}
+.sorting .row-edit{transition:transform .16s ease}
+.row-edit.dragging{transition:none;z-index:3;background:var(--panel);border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.55),0 0 0 1px var(--line-hi)}
+.row-edit.dragging .grip{color:var(--red-ink);cursor:grabbing}
 .row-edit .fld{min-height:42px;font-size:16px}
 .x{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--ink-dim)}
 

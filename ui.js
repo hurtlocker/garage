@@ -453,17 +453,75 @@ function projectNotes(id) {
   if (!l.length) return '';
   return `<div class="lbl">Log notes · ${l.length}</div>` + l.map(x => `<div class="entry" style="cursor:default"><div class="date-chip">${x.date ? fmtDate(x.date) : '—'}</div><div class="grow"><div class="n" style="margin:0">${esc(x.note || x.tags.join(', '))}</div><div class="s">${x.odo != null ? fmtMi(x.odo) + ' mi' : ''}</div></div></div>`).join('');
 }
+const GRIP = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+const grip = (list, i, n, what) => `<span class="grip" role="button" tabindex="0" data-list="${list}" data-i="${i}" aria-label="Reorder ${esc(what || list)}: press and hold, then drag. Arrow keys also move it." aria-roledescription="drag handle" title="Press and hold to drag">${GRIP}</span>`;
 function paintPDraft() {
   const pb = $('#jParts'), tb = $('#jTasks'); if (!pb) return;
-  pb.innerHTML = PDRAFT.parts.map((x, i) => `<div class="row-edit"><button class="box ${x.have ? 'on' : ''}" data-act="pPartHave" data-i="${i}" aria-label="Have this part" aria-pressed="${!!x.have}">${x.have ? IC.check : ''}</button>
+  pb.innerHTML = PDRAFT.parts.map((x, i) => `<div class="row-edit parts"><button class="box ${x.have ? 'on' : ''}" data-act="pPartHave" data-i="${i}" aria-label="Have this part" aria-pressed="${!!x.have}">${x.have ? IC.check : ''}</button>
     <input class="fld txt" data-pp="name" data-i="${i}" value="${esc(x.name)}" placeholder="Part" aria-label="Part name">
     <input class="fld" data-pp="cost" data-i="${i}" value="${x.cost ?? ''}" inputmode="decimal" placeholder="$" aria-label="Cost">
+    ${grip('parts', i, PDRAFT.parts.length, x.name || 'part')}
     <button class="x" data-act="pDelPart" data-i="${i}" aria-label="Remove part">${IC.x}</button></div>`).join('');
-  tb.innerHTML = PDRAFT.tasks.map((t, i) => `<div class="row-edit" style="grid-template-columns:28px minmax(0,1fr) 36px"><button class="box ${t.done ? 'on' : ''}" data-act="pTaskDone" data-i="${i}" aria-label="Task done" aria-pressed="${!!t.done}">${t.done ? IC.check : ''}</button>
+  tb.innerHTML = PDRAFT.tasks.map((t, i) => `<div class="row-edit tasks"><button class="box ${t.done ? 'on' : ''}" data-act="pTaskDone" data-i="${i}" aria-label="Task done" aria-pressed="${!!t.done}">${t.done ? IC.check : ''}</button>
     <input class="fld txt" data-pt="t" data-i="${i}" value="${esc(t.t)}" placeholder="Task" aria-label="Task">
+    ${grip('tasks', i, PDRAFT.tasks.length, t.t || 'task')}
     <button class="x" data-act="pDelTask" data-i="${i}" aria-label="Remove task">${IC.x}</button></div>`).join('');
   $$('[data-pp]', pb).forEach(el => el.oninput = () => { const x = PDRAFT.parts[+el.dataset.i]; x[el.dataset.pp] = el.dataset.pp === 'cost' ? num(el.value) : el.value; });
   $$('[data-pt]', tb).forEach(el => el.oninput = () => { PDRAFT.tasks[+el.dataset.i].t = el.value; });
+  $$('.grip', pb).concat($$('.grip', tb)).forEach(wireGrip);
+}
+/* ---------- press-and-hold to reorder (parts / tasks) ---------- */
+function moveItem(list, from, to) {
+  const arr = PDRAFT[list]; if (to < 0 || to >= arr.length || to === from) return false;
+  const [it] = arr.splice(from, 1); arr.splice(to, 0, it); return true;
+}
+function wireGrip(g) {
+  const list = g.dataset.list, i = +g.dataset.i;
+  g.addEventListener('keydown', e => {                       // keyboard: arrow keys move the item
+    const to = e.key === 'ArrowUp' ? i - 1 : e.key === 'ArrowDown' ? i + 1 : null;
+    if (to == null) return; e.preventDefault();
+    if (moveItem(list, i, to)) { paintPDraft(); const ng = $(`.grip[data-list="${list}"][data-i="${to}"]`); if (ng) ng.focus(); }
+  });
+  g.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    e.preventDefault();
+    const sh = $('#sheet'), row = g.closest('.row-edit'), box = row.parentElement;
+    const startY = e.clientY, startScroll = sh.scrollTop;
+    let started = false, cur = i, rows, step;
+    try { g.setPointerCapture(e.pointerId); } catch (_) {}
+    const begin = () => {
+      started = true; rows = $$('.row-edit', box);
+      step = rows.length > 1 ? rows[1].getBoundingClientRect().top - rows[0].getBoundingClientRect().top : row.offsetHeight + 8;
+      row.classList.add('dragging'); box.classList.add('sorting');
+      if (navigator.vibrate) navigator.vibrate(12);
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    };
+    const timer = setTimeout(begin, e.pointerType === 'mouse' ? 120 : 260);   // the "hold"
+    const move = ev => {
+      if (!started) { if (Math.abs(ev.clientY - startY) > 10) finish(false); return; }
+      ev.preventDefault();
+      const r = sh.getBoundingClientRect();                  // auto-scroll near the sheet edges
+      if (ev.clientY < r.top + 70) sh.scrollTop -= 10; else if (ev.clientY > window.innerHeight - 70) sh.scrollTop += 10;
+      const dy = ev.clientY - startY + (sh.scrollTop - startScroll);
+      row.style.transform = `translateY(${dy}px)`;
+      cur = Math.max(0, Math.min(rows.length - 1, i + Math.round(dy / step)));
+      rows.forEach((rw, j) => {
+        if (j === i) return;
+        const s = (i < cur && j > i && j <= cur) ? -step : (i > cur && j < i && j >= cur) ? step : 0;
+        rw.style.transform = s ? `translateY(${s}px)` : '';
+      });
+    };
+    const finish = commit => {
+      clearTimeout(timer);
+      g.removeEventListener('pointermove', move); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', cancel);
+      if (!started) return;
+      box.classList.remove('sorting');
+      if (commit && moveItem(list, i, cur)) paintPDraft();
+      else { rows.forEach(rw => rw.style.transform = ''); row.classList.remove('dragging'); }
+    };
+    const up = () => finish(true), cancel = () => finish(false);
+    g.addEventListener('pointermove', move); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', cancel);
+  });
 }
 function collectProject() {
   const sh = $('#sheet');
@@ -664,6 +722,7 @@ function flashCard(id) {
     if (!sh.classList.contains('open') || e.touches.length > 1) { y0 = null; return; }
     const onHandle = !!e.target.closest('.grab-zone');
     // From the body, only start a pull when the sheet is scrolled to the top and the finger isn't in a text box.
+    if (e.target.closest('.grip')) { y0 = null; return; }   // reorder handles own their touches
     if (!onHandle && (sh.scrollTop > 0 || e.target.closest('textarea, select'))) { y0 = null; return; }
     y0 = e.touches[0].clientY; dy = 0; dragging = false; samples = [];
   }, {passive: true});
