@@ -85,6 +85,7 @@ module.exports = async ({browser, base, check}) => {
 
   await page.click('[data-act=addVehicle]');
   await page.setInputFiles('#vPhoto', path.join(ROOT, 'icons', 'icon-512.png')); await page.waitForTimeout(400);
+  await page.click('.cropper [data-c=ok]'); await page.waitForTimeout(300);
   await page.fill('#vNick', 'Test Car'); await page.fill('#vModel', 'CRX'); await page.fill('#vOdo', '50000');
   await page.click('[data-act=saveVehicle]'); await page.waitForTimeout(3500);
   check(/#\/v\/v-/.test(await page.evaluate(() => location.hash)), 'register vehicle opens it');

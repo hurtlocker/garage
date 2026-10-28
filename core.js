@@ -2,7 +2,7 @@
 /* ============================================================
    THE GARAGE — core: utils, storage, calculations, sync, snapshot
    ============================================================ */
-const APP_VERSION = '1.9.1';
+const APP_VERSION = '1.10.0';
 
 /* ---------- utils ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -103,6 +103,7 @@ async function load() {
   try {
     const d = await idbGet('data'); if (d && d.vehicles) { DATA = Object.assign(EMPTY(), d); if (normalizeData()) save(); }
     PHOTOS = (await idbGet('photos')) || {};
+    PHOTO_SRC = (await idbGet('photoSrc')) || {};
     const s = await idbGet('sync'); if (s) SYNC = Object.assign(SYNC, s);
   } catch (e) { console.warn('load failed', e); }
 }
@@ -117,6 +118,9 @@ function save(opts = {}) {
 }
 const saveSync = () => idbPut('sync', SYNC).catch(() => {});
 const savePhotos = () => idbPut('photos', PHOTOS).catch(() => {});
+/* The uncropped original of each hero photo, kept on this device only so the crop can be re-adjusted later. */
+let PHOTO_SRC = {};
+const savePhotoSrc = () => idbPut('photoSrc', PHOTO_SRC).catch(() => {});
 
 /* ---------- specs: quick reference vs. the rest ----------
    Spec rows are [label, value, source, quick?]. quick === true/false is the user's choice;

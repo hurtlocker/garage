@@ -792,13 +792,70 @@ const hoursHelp = (h, by) => num(h) > 0 && isDIY(by) ? `≈ ${money(num(h) * sho
 /* ============================================================
    VEHICLE REGISTER / EDIT
    ============================================================ */
-let NEWPHOTO = null;
+let NEWPHOTO = null, NEWSRC = null;
+/* ---------- hero photo crop ----------
+   Pan (drag) and zoom (pinch, wheel or slider) inside a 2:1 frame, the main card's hero shape.
+   Resolves with a 1280×640 JPEG data URL, or null if cancelled. */
+const CROP_W = 1280, CROP_H = 640;
+function cropImage(src) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const ov = document.createElement('div'); ov.className = 'cropper'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Adjust photo');
+      ov.innerHTML = `<div class="crop-inner"><div class="crop-h"><h2 class="h2">Adjust photo</h2><span class="help">Drag to move · pinch or slide to zoom</span></div>
+        <div class="crop-frame" tabindex="0" aria-label="Photo position. Arrow keys move it, plus and minus zoom."><img alt="" draggable="false"></div>
+        <div class="crop-zoom"><span class="lbl">Zoom</span><input type="range" min="1" max="4" step="0.01" value="1" aria-label="Zoom"></div>
+        <div class="g3"><button class="btn2" data-c="cancel">Cancel</button><button class="btn2" data-c="reset">Reset</button><button class="btn-red-sm" data-c="ok">USE PHOTO</button></div></div>`;
+      document.body.appendChild(ov);
+      const frame = $('.crop-frame', ov), im = $('img', ov), zr = $('input', ov); im.src = src;
+      const iw = img.naturalWidth, ih = img.naturalHeight;
+      let z = 1, cx = iw / 2, cy = ih / 2;                    // zoom (1 = just covers the frame) and image point at the frame's center
+      const fw = () => frame.clientWidth, fh = () => frame.clientHeight;
+      const base = () => Math.max(fw() / iw, fh() / ih), sc = () => base() * z;
+      const clamp = () => { const hw = fw() / sc() / 2, hh = fh() / sc() / 2; cx = Math.min(iw - hw, Math.max(hw, cx)); cy = Math.min(ih - hh, Math.max(hh, cy)); };
+      const paint = () => { clamp(); const s2 = sc(); im.style.width = iw * s2 + 'px'; im.style.height = ih * s2 + 'px'; im.style.transform = `translate(${fw() / 2 - cx * s2}px,${fh() / 2 - cy * s2}px)`; zr.value = z; };
+      const setZ = nz => { z = Math.min(4, Math.max(1, nz)); paint(); };
+      paint(); requestAnimationFrame(paint);
+      const pts = new Map(); let last = null, pinch0 = null;
+      frame.addEventListener('pointerdown', e => { frame.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); last = [e.clientX, e.clientY];
+        if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = {d: Math.hypot(a[0] - b[0], a[1] - b[1]), z}; } });
+      frame.addEventListener('pointermove', e => {
+        if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+        if (pts.size === 2 && pinch0) { const [a, b] = [...pts.values()]; setZ(pinch0.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch0.d); return; }
+        const s2 = sc(); cx -= (e.clientX - last[0]) / s2; cy -= (e.clientY - last[1]) / s2; last = [e.clientX, e.clientY]; paint();
+      });
+      const up = e => { pts.delete(e.pointerId); pinch0 = null; const r = [...pts.values()][0]; last = r || null; };
+      frame.addEventListener('pointerup', up); frame.addEventListener('pointercancel', up);
+      frame.addEventListener('wheel', e => { e.preventDefault(); setZ(z * (e.deltaY < 0 ? 1.08 : 1 / 1.08)); }, {passive: false});
+      frame.addEventListener('keydown', e => { const k = e.key, st = 20 / sc();
+        if (k === 'ArrowLeft') cx -= st; else if (k === 'ArrowRight') cx += st; else if (k === 'ArrowUp') cy -= st; else if (k === 'ArrowDown') cy += st;
+        else if (k === '+' || k === '=') return setZ(z * 1.1); else if (k === '-') return setZ(z / 1.1); else return; e.preventDefault(); paint(); });
+      zr.addEventListener('input', () => setZ(+zr.value));
+      const onResize = () => paint(); window.addEventListener('resize', onResize);
+      const done = v => { window.removeEventListener('resize', onResize); document.removeEventListener('keydown', esc2, true); ov.remove(); resolve(v); };
+      const esc2 = e => { if (e.key === 'Escape') { e.stopPropagation(); done(null); } }; document.addEventListener('keydown', esc2, true);
+      ov.addEventListener('click', e => { const c = e.target.closest('[data-c]'); if (!c) return; e.stopPropagation();
+        if (c.dataset.c === 'cancel') done(null);
+        else if (c.dataset.c === 'reset') { z = 1; cx = iw / 2; cy = ih / 2; paint(); }
+        else {
+          const s2 = sc(), sw = fw() / s2, sh2 = fh() / s2, cv = document.createElement('canvas'); cv.width = CROP_W; cv.height = CROP_H;
+          const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(img, cx - sw / 2, cy - sh2 / 2, sw, sh2, 0, 0, CROP_W, CROP_H);
+          let q = 0.85, out = cv.toDataURL('image/jpeg', q); while (out.length * 0.75 > 260000 && q > 0.45) { q -= 0.08; out = cv.toDataURL('image/jpeg', q); }
+          done(out);
+        } });
+      setTimeout(() => frame.focus(), 50);
+    };
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
 function editVehicle(vid) {
   const v = vid ? V(vid) : {nickname: '', year: '', make: '', model: '', trim: '', transmission: '', plate: '', vin: '', status: 'Active', purchaseDate: '', purchaseMi: null};
-  NEWPHOTO = null;
+  NEWPHOTO = null; NEWSRC = null;
   openSheet(vid ? 'Edit vehicle' : 'Register vehicle', `
     <label class="photo-pick"><span id="vPhotoPrev" style="display:contents">${vid && PHOTOS[vid] ? `<img src="${PHOTOS[vid]}" alt="">` : `${IC.cam} Add hero photo`}</span>
       <input id="vPhoto" type="file" accept="image/*" class="sr"></label>
+    <div class="g2" id="vPhotoBtns" ${vid && PHOTOS[vid] ? '' : 'hidden'}><button class="btn2 sm" data-act="vCrop">Adjust crop</button><button class="btn2 sm" data-act="vPhotoNew">Choose another photo</button></div>
     <div class="field"><label class="lbl" for="vNick">Name / nickname</label><input id="vNick" class="fld txt" value="${esc(v.nickname)}" placeholder="e.g. Rocinante"></div>
     <div class="g3"><div class="field"><label class="lbl" for="vYear">Year</label><input id="vYear" class="fld" inputmode="numeric" value="${v.year ?? ''}"></div>
       <div class="field"><label class="lbl" for="vMake">Make</label><input id="vMake" class="fld txt" value="${esc(v.make)}"></div>
@@ -813,7 +870,15 @@ function editVehicle(vid) {
     ${vid ? '' : `<div class="field"><label class="lbl" for="vOdo">Current odometer</label><input id="vOdo" class="fld" inputmode="numeric"></div>`}
     <button class="btn" data-act="saveVehicle" data-vid="${vid || ''}">SAVE</button>
     ${vid ? `<div class="g2"><button class="btn2" data-act="moveVehicle" data-vid="${vid}">Make main card</button><button class="btn2 danger" data-act="delVehicle" data-vid="${vid}">Delete vehicle</button></div>` : ''}`,
-    sh => { $('#vPhoto', sh).onchange = async e => { const f = e.target.files[0]; if (!f) return; try { NEWPHOTO = await shrinkImage(f); $('#vPhotoPrev', sh).innerHTML = `<img src="${NEWPHOTO}" alt="">`; } catch (er) { toast('Could not read that image'); } }; });
+    sh => { $('#vPhoto', sh).onchange = async e => { const f = e.target.files[0]; if (!f) return; e.target.value = '';
+      try { const src = await shrinkImage(f, 2400, 1500000); await cropPhoto(src, sh); } catch (er) { toast('Could not read that image'); } }; });
+}
+/** Crop `src` and show the result in the vehicle sheet (nothing is saved until SAVE). */
+async function cropPhoto(src, sh = $('#sheet')) {
+  const out = await cropImage(src); if (!out) return false;
+  NEWPHOTO = out; NEWSRC = src;
+  $('#vPhotoPrev', sh).innerHTML = `<img src="${out}" alt="">`; $('#vPhotoBtns', sh).hidden = false;
+  return true;
 }
 function saveVehicle(vid) {
   const nick = sv('#vNick'), model = sv('#vModel'); if (!nick && !model) { warn('Add a name or model'); return; }
@@ -826,7 +891,7 @@ function saveVehicle(vid) {
     if (odo != null) DATA.logs.push({id: uid('l'), vid: v.id, date: today(), odo, fuel: null, note: 'Registered in The Garage. Baseline odometer.', tags: ['Baseline'], projectId: null});
     DATA.schedule.push({id: uid('s'), vid: v.id, name: 'Oil & filter', everyMi: 5000, everyMo: 6, action: 'replace', lastMi: null, lastDate: null, source: 'Default — edit to match the manual'});
   }
-  if (NEWPHOTO) { PHOTOS[v.id] = NEWPHOTO; v.photo = `photos/${v.id}.jpg`; SYNC.photoDirty.push(v.id); savePhotos(); }
+  if (NEWPHOTO) { PHOTOS[v.id] = NEWPHOTO; v.photo = `photos/${v.id}.jpg`; SYNC.photoDirty.push(v.id); savePhotos(); if (NEWSRC) { PHOTO_SRC[v.id] = NEWSRC; savePhotoSrc(); } }
   save(); closeSheet(); if (!vid) go(`#/v/${v.id}/log`); else render(); toast(vid ? 'Vehicle updated' : 'Vehicle registered');
 }
 
@@ -954,10 +1019,12 @@ function flashCard(id) {
 const ACT = {
   closeSheet, settings: openSettings, addVehicle: () => editVehicle(null), openV: d => go(isWide() ? `#/v/${d.vid}/${deskDefaultTab(d.vid)}` : `#/v/${d.vid}/log`), goMx: d => go(`#/v/${d.vid}/mx`),
   editVehicle: d => editVehicle(d.vid), saveVehicle: d => saveVehicle(d.vid),
+  vCrop: () => { const vid = $('[data-act=saveVehicle]', $('#sheet')).dataset.vid; const src = NEWSRC || (vid && (PHOTO_SRC[vid] || PHOTOS[vid])); if (src) cropPhoto(src); },
+  vPhotoNew: () => $('#vPhoto', $('#sheet')).click(),
   moveVehicle: d => { const vs = [...DATA.vehicles].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)); const v = V(d.vid); vs.splice(vs.indexOf(v), 1); vs.unshift(v); vs.forEach((x, i) => x.order = i); save(); closeSheet(); toast('Now the main card'); },
   delVehicle: d => { const v = V(d.vid); if (!confirm(`Delete ${vName(v)} and all of its log, MX and project data? This can't be undone.`)) return;
     ['logs', 'schedule', 'services', 'projects'].forEach(k => DATA[k] = DATA[k].filter(x => x.vid !== d.vid)); DATA.vehicles = DATA.vehicles.filter(x => x.id !== d.vid);
-    delete PHOTOS[d.vid]; savePhotos(); save(); closeSheet(); go('#/'); },
+    delete PHOTOS[d.vid]; savePhotos(); delete PHOTO_SRC[d.vid]; savePhotoSrc(); save(); closeSheet(); go("#/"); },
   flip: (d, el) => el.setAttribute('aria-checked', el.getAttribute('aria-checked') !== 'true'),
   copyId: async (d, el) => {
     const ok = await copyText(d.v);
