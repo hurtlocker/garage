@@ -325,7 +325,7 @@ function mxHistory(vid) {
     ${s.length ? `<div class="help">${s.length} records · ${money(total)} logged</div>` + s.map(x => { const d = parseD(x.date); return `<button class="entry" data-act="editService" data-id="${x.id}">
       <div class="date-chip">${d ? MON[d.getMonth()] + '<br>' + d.getDate() + '<br><span class="faint">' + String(d.getFullYear()).slice(2) + '</span>' : '—'}</div>
       <div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px"><span class="t">${esc(x.title)}</span><span class="mono" style="font-size:14px">${svcCost(x) ? money(svcCost(x)) : ''}</span></div>
-      <div class="s">${x.odo != null ? fmtMi(x.odo) + ' mi' : '— mi'}${x.doneBy ? ' · ' + esc(x.doneBy) : ''}${x.type ? ' · ' + esc(x.type) : ''}</div>${x.notes ? `<div class="n">${esc(x.notes)}</div>` : ''}</div></button>`; }).join('')
+      <div class="s">${x.odo != null ? fmtMi(x.odo) + ' mi' : '— mi'}${x.doneBy ? ' · ' + esc(x.doneBy) : ''}${x.type ? ' · ' + esc(x.type) : ''}${x.hours ? ` · ${x.hours} h${isDIY(x.doneBy) && !x.projectId ? ' ≈ ' + money(x.hours * shopRate(), 0) + ' saved' : ''}` : ''}</div>${x.notes ? `<div class="n">${esc(x.notes)}</div>` : ''}</div></button>`; }).join('')
       : '<div class="empty">No service records yet.</div>'}`;
 }
 function kv(k, v, act, data = '', copy, src) {
@@ -391,8 +391,10 @@ function editService(id, vid, schedId) {
       <div class="field"><label class="lbl" for="mOdo">Odometer</label><input id="mOdo" class="fld" inputmode="numeric" value="${s.odo ?? ''}"></div></div>
     <div class="g2"><div class="field"><label class="lbl" for="mType">Type</label><select id="mType" class="fld"><option value="">—</option>${SVC_TYPES.map(t => `<option ${s.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
       <div class="field"><label class="lbl" for="mBy">Done by</label><select id="mBy" class="fld">${['DIY', 'Shop', 'Mobile Mechanic', 'Dealer'].map(t => `<option ${s.doneBy === t ? 'selected' : ''}>${t}</option>`).join('')}<option value="" ${!s.doneBy ? 'selected' : ''}>—</option></select></div></div>
-    <div class="g2"><div class="field"><label class="lbl" for="mParts">Parts $</label><input id="mParts" class="fld" inputmode="decimal" value="${s.parts ?? ''}"></div>
-      <div class="field"><label class="lbl" for="mLabor">Labor $</label><input id="mLabor" class="fld" inputmode="decimal" value="${s.labor ?? ''}"></div></div>
+    <div class="g3"><div class="field"><label class="lbl" for="mParts">Parts $</label><input id="mParts" class="fld" inputmode="decimal" value="${s.parts ?? ''}"></div>
+      <div class="field"><label class="lbl" for="mLabor">Labor $</label><input id="mLabor" class="fld" inputmode="decimal" value="${s.labor ?? ''}"></div>
+      <div class="field"><label class="lbl" for="mHours">Hours</label><input id="mHours" class="fld" inputmode="decimal" value="${s.hours ?? ''}" placeholder="0.0"></div></div>
+    <div class="help" id="mSaveHelp">${hoursHelp(s.hours, s.doneBy)}</div>
     ${sched.length ? `<div class="field"><label class="lbl" for="mSched">Counts as schedule item</label><select id="mSched" class="fld"><option value="">None</option>${sched.map(it => `<option value="${it.id}" ${s.scheduleId === it.id ? 'selected' : ''}>${esc(it.name)}</option>`).join('')}</select>
       <div class="help">Resets that item's due countdown from this date and odometer.</div></div>` : ''}
     <div class="field"><label class="lbl" for="mNotes">Notes (parts used, part numbers…)</label><textarea id="mNotes" class="fld">${esc(s.notes || '')}</textarea></div>
@@ -403,7 +405,7 @@ function saveService(id, vid) {
   const title = sv('#mTitle'); if (!title) { warn('Describe the work'); return; }
   let s = id && DATA.services.find(x => x.id === id);
   if (!s) { s = {id: uid('m'), vid, projectId: null}; DATA.services.push(s); }
-  Object.assign(s, {title, date: sv('#mDate') || null, odo: num(sv('#mOdo')), type: sv('#mType'), doneBy: sv('#mBy'), parts: num(sv('#mParts')), labor: num(sv('#mLabor')),
+  Object.assign(s, {title, date: sv('#mDate') || null, odo: num(sv('#mOdo')), type: sv('#mType'), doneBy: sv('#mBy'), parts: num(sv('#mParts')), labor: num(sv('#mLabor')), hours: num(sv('#mHours')),
     notes: sv('#mNotes'), scheduleId: $('#mSched', $('#sheet')) ? sv('#mSched') || null : s.scheduleId || null});
   let cleared = false;
   if (s.scheduleId) {
@@ -466,7 +468,7 @@ function projCard(p, group) {
     <div class="top"><div class="ttl">${esc(p.title)}</div>${p.priority && p.priority !== 'Normal' ? `<span class="pri ${p.priority}">${p.priority.toUpperCase()}</span>` : ''}</div>
     <div class="chips" style="gap:6px">${tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
     ${p.notes ? `<div class="n">${esc(p.notes)}</div>` : ''}
-    ${parts.length || tasks.length ? `<div class="mono muted" style="font-size:12px">${parts.length ? `Parts ${ph}/${parts.length}${cost ? ' · ' + money(cost, 0) : ''}` : ''}${parts.length && tasks.length ? ' · ' : ''}${tasks.length ? `Tasks ${td}/${tasks.length}` : ''}</div>` : ''}</button>`;
+    ${parts.length || tasks.length || p.hours ? `<div class="mono muted" style="font-size:12px">${[parts.length && `Parts ${ph}/${parts.length}${cost ? ' · ' + money(cost, 0) : ''}`, tasks.length && `Tasks ${td}/${tasks.length}`, p.hours && `${p.hours} h`].filter(Boolean).join(' · ')}</div>` : ''}</button>`;
 }
 function renderProjects(vid) {
   const all = projOf(vid), open = all.filter(p => p.status !== 'Done'), done = all.filter(p => p.status === 'Done');
@@ -501,6 +503,8 @@ function editProject(id, vid) {
       <div class="field"><label class="lbl" for="jStatus">Status</label><select id="jStatus" class="fld">${STATUSES.map(s => `<option ${p.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div></div>
     <div class="g2"><div class="field"><label class="lbl" for="jPhase">Phase</label><select id="jPhase" class="fld"><option value="" ${!p.phase ? 'selected' : ''}>No phase</option>${PHASES.map(n => `<option value="${n}" ${p.phase === n ? 'selected' : ''}>Phase ${n}</option>`).join('')}</select></div>
       <div class="field"><label class="lbl" for="jPri">Priority</label><select id="jPri" class="fld">${['High', 'Normal', 'Low'].map(x => `<option ${p.priority === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div></div>
+    <div class="field"><label class="lbl" for="jHours">Hours worked</label><input id="jHours" class="fld" inputmode="decimal" value="${p.hours ?? ''}" placeholder="0.0">
+      <div class="help" id="jSaveHelp">${hoursHelp(p.hours)}</div></div>
     <div class="switchrow"><div>Watch item<span class="s">Shows on the Log page until done; notes can attach to it</span></div><button class="switch" role="switch" id="jWatch" aria-checked="${!!p.watch}" aria-label="Watch item" data-act="flip"></button></div>
     <div class="field"><label class="lbl" for="jNotes">Notes</label><textarea id="jNotes" class="fld">${esc(p.notes)}</textarea></div>
     <div class="lbl">Parts</div><div id="jParts" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -650,7 +654,7 @@ function wireGrip(g) {
 }
 function collectProject() {
   const sh = $('#sheet');
-  Object.assign(PDRAFT, {title: sv('#jTitle'), category: sv('#jCat'), status: sv('#jStatus'), phase: normPhase(sv('#jPhase')), priority: sv('#jPri'), notes: sv('#jNotes'),
+  Object.assign(PDRAFT, {title: sv('#jTitle'), category: sv('#jCat'), status: sv('#jStatus'), phase: normPhase(sv('#jPhase')), priority: sv('#jPri'), notes: sv('#jNotes'), hours: num(sv('#jHours')),
     watch: $('#jWatch', sh).getAttribute('aria-checked') === 'true'});
   PDRAFT.parts = PDRAFT.parts.filter(x => (x.name || '').trim()); PDRAFT.tasks = PDRAFT.tasks.filter(t => (t.t || '').trim());
   return PDRAFT;
@@ -734,8 +738,19 @@ function renderStats(vid) {
       <div class="legend"><span><i style="background:#7FA7BD"></i>Fuel ${money(s.fuelSpend, 0)}</span><span><i style="background:#E0A445"></i>MX ${money(s.mxSpend, 0)}</span><span><i style="background:#C2302B"></i>Projects ${money(s.projSpend, 0)}</span></div>
       ${spendChart(s.months)}</div>
     <div class="panel"><h2 class="h2">Cost per mile</h2>${hb('Fuel', s.fuelPerMile, '#7FA7BD')}${hb('MX', s.mxPerMile, '#E0A445')}${hb('Projects', s.projPerMile, '#C2302B')}
-      <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--line-lo)"><span class="lbl">${fmtMi(s.miles)} mi · ${s.fills} fill-ups · ${s.gal ? s.gal.toFixed(1) : 0} gal</span><span class="mono" style="font-weight:600">${s.perMile != null ? money(s.perMile) : '—'}</span></div></div>`;
+      <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--line-lo)"><span class="lbl">${fmtMi(s.miles)} mi · ${s.fills} fill-ups · ${s.gal ? s.gal.toFixed(1) : 0} gal</span><span class="mono" style="font-weight:600">${s.perMile != null ? money(s.perMile) : '—'}</span></div></div>
+    ${diyPanel(s)}`;
 }
+/** DIY labor: hours you worked, priced at the shop rate from Settings. */
+function diyPanel(s) {
+  const jobs = [...s.diy].sort((a, b) => b.saved - a.saved);
+  return `<div class="panel" aria-label="DIY labor saved"><div style="display:flex;justify-content:space-between;align-items:baseline"><h2 class="h2">DIY labor saved</h2><button class="mono muted" style="font-size:12px" data-act="settings">at ${money(shopRate(), 0)}/h ›</button></div>
+    ${jobs.length ? `<div style="display:flex;align-items:baseline;gap:12px"><span class="mono" style="font-size:28px;font-weight:600;color:var(--steel)">${money(s.diySaved, 0)}</span>
+      <span class="muted" style="font-size:13px">${+s.diyHours.toFixed(2)} h · ${jobs.length} job${jobs.length === 1 ? '' : 's'}</span></div>
+      ${jobs.slice(0, 5).map(j => `<button class="hbar" data-act="${j.kind === 'svc' ? 'editService' : 'editProject'}" data-id="${j.id}" style="text-align:left;width:100%"><span class="k" style="width:auto;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(j.title)}${j.open ? ' <span class="faint">(in progress)</span>' : ''}</span><span class="mono muted" style="font-size:12px">${j.hours} h</span><span class="v" style="width:64px">${money(j.saved, 0)}</span></button>`).join('')}`
+    : `<div class="help">Log hours on a DIY service record or a project and this shows what a shop would have charged for that labor.</div>`}</div>`;
+}
+const hoursHelp = (h, by) => num(h) > 0 && isDIY(by) ? `≈ ${money(num(h) * shopRate(), 0)} in shop labor saved at ${money(shopRate(), 0)}/h` : `Your time on it. DIY hours × ${money(shopRate(), 0)}/h shop rate = labor saved.`;
 
 /* ============================================================
    VEHICLE REGISTER / EDIT
@@ -804,6 +819,10 @@ function openSettings() {
     <div class="g2"><div class="field"><label class="lbl" for="aMi">Due soon within mi</label><input id="aMi" class="fld" inputmode="numeric" value="${DATA.settings.dueSoonMi}"></div>
       <div class="field"><label class="lbl" for="aDays">…or days</label><input id="aDays" class="fld" inputmode="numeric" value="${DATA.settings.dueSoonDays}"></div></div>
     <button class="btn2" data-act="saveAlerts">Save alert thresholds</button>
+    <div class="lbl" style="margin-top:8px">DIY savings</div>
+    <div class="field"><label class="lbl" for="aRate">Shop labor rate, $ / hour</label><input id="aRate" class="fld" inputmode="decimal" value="${shopRate()}">
+      <div class="help">Default ${money(SHOP_RATE_DEFAULT, 0)}: Ohio average for independent shops (Tekmetric, June 2026). Dealers run higher. Use a local quote if you have one.</div></div>
+    <button class="btn2" data-act="saveRate">Save shop rate</button>
     ${HAPTICS_SHELVED ? '' : `<div class="lbl" style="margin-top:8px">This device</div>
     <div class="switchrow"><div>Haptic feedback<span class="s">Ticks when you cross a line or finish something. On iPhone this is a light system tick.</span></div>
       <button class="switch" role="switch" id="hapOn" aria-checked="${Haptics.enabled()}" aria-label="Haptic feedback" data-act="toggleHaptics"></button></div>`}
@@ -954,6 +973,7 @@ const ACT = {
   disconnect: () => { if (!confirm('Disconnect sync? Your repo is untouched; the token is removed from this device.')) return; Cloud.disconnect(); openSettings(); },
   copyToken: async () => { if (!SYNC.token) { toast('No token on this device'); return; } toast(await copyText(SYNC.token) ? 'Token copied · paste it on the other device' : 'Couldn’t copy the token'); },
   copySnap: () => navigator.clipboard.writeText(buildSnapshot()).then(() => toast('Snapshot copied')),
+  saveRate: () => { const r = num(sv('#aRate')); if (!(r > 0)) { warn('Enter a rate in dollars per hour'); return; } DATA.settings.shopRate = r; save(); render(); toast(`Shop rate ${money(r, 0)}/h`); },
   saveAlerts: () => { DATA.settings.dueSoonMi = num(sv('#aMi')) ?? 500; DATA.settings.dueSoonDays = num(sv('#aDays')) ?? 30; save(); render(); toast('Saved'); },
   toggleHaptics: (d, el) => { const on = el.getAttribute('aria-checked') !== 'true'; Haptics.setEnabled(on); el.setAttribute('aria-checked', on); if (on) Haptics.tap(); },
   updateApp: async () => { toast('Checking…'); try { const r = SW_REG || await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch (e) {} location.reload(); },
@@ -965,6 +985,11 @@ document.addEventListener('click', e => {
   e.preventDefault(); fn(el.dataset, el, e);
 });
 $('#scrim').addEventListener('click', closeSheet);
+['input', 'change'].forEach(ev => document.addEventListener(ev, e => {      // live "≈ $ saved" under the hours fields
+  const id = e.target.id;
+  if (id === 'mHours' || id === 'mBy') { const h = $('#mSaveHelp'); if (h) h.textContent = hoursHelp(sv('#mHours'), sv('#mBy')); }
+  if (id === 'jHours') { const h = $('#jSaveHelp'); if (h) h.textContent = hoursHelp(sv('#jHours')); }
+}));
 WIDE_MQ.addEventListener('change', () => render());     // window resized across 1024 px: switch layouts in place
 
 /* ---------- boot ---------- */

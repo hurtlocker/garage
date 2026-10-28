@@ -20,6 +20,25 @@ module.exports = async ({browser, base, check}) => {
   const labels = await page.$$eval('.chart[aria-label^="Monthly"] text', ts => ts.map(x => x.textContent).filter(x => /^[A-Z][a-z]{2}$/.test(x)));
   const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], exp = [1, 0].map(n => MON[(t.getMonth() - n + 12) % 12]);
   check(JSON.stringify(labels) === JSON.stringify(exp), `spend chart shows consecutive months from the first spending to now (${labels.join(' ')})`);
+  // DIY labor: a DIY service with hours, a shop service with hours (not counted), a project with hours, and its finished-project MX record (not double counted)
+  await page.evaluate(() => {
+    DATA.services.push({id: 'm-diy', vid: 'v-roci', date: today(), odo: 124700, title: 'Brake pads', type: 'Brakes', parts: 60, labor: null, doneBy: 'DIY', hours: 2},
+      {id: 'm-shop', vid: 'v-roci', date: today(), odo: 124700, title: 'Alignment', type: 'Tires', parts: 0, labor: 90, doneBy: 'Shop', hours: 1});
+    DATA.projects.find(p => p.id === 'p-000').hours = 3; DATA.services.find(s => s.id === 'm-proj').hours = 3; save(); render();
+  });
+  const dv = await page.evaluate(() => { const a = stats('v-roci', 'all'); return {h: a.diyHours, saved: a.diySaved, n: a.diy.length}; });
+  check(dv.h === 5 && dv.saved === 625 && dv.n === 2, `DIY savings: 5 h × $125 = $625 over 2 jobs (got ${dv.h} h, $${dv.saved}, ${dv.n} jobs)`);
+  check((await page.textContent('[aria-label="DIY labor saved"]')).includes('$625'), 'Stats shows the DIY labor saved panel');
+  await page.click('[data-act=settings] >> nth=0'); await page.waitForTimeout(250);
+  await page.fill('#aRate', '150'); await page.click('[data-act=saveRate]'); await page.evaluate(() => closeSheet()); await page.waitForTimeout(250);
+  check(await page.evaluate(() => stats('v-roci', 'all').diySaved) === 750, 'changing the shop rate in Settings reprices the savings');
+  await page.goto(base + '#/v/v-roci/projects'); await page.waitForTimeout(200);
+  await page.click('.pcard >> nth=0'); await page.waitForTimeout(300);
+  await page.fill('#jHours', '1.5');
+  check((await page.textContent('#jSaveHelp')).includes('$225'), 'project sheet previews the savings as you type hours');
+  await page.click('[data-act=saveProject]'); await page.waitForTimeout(250);
+  check(await page.evaluate(() => DATA.projects.some(p => p.hours === 1.5)), 'project hours saved');
+  check((await page.evaluate(() => buildSnapshot())).includes('**DIY labor**'), 'DIY labor in snapshot.md');
   check(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.join('; ') : ''));
   await page.context().close();
 };

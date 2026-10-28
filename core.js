@@ -2,7 +2,7 @@
 /* ============================================================
    THE GARAGE — core: utils, storage, calculations, sync, snapshot
    ============================================================ */
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.9.0';
 
 /* ---------- utils ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -70,8 +70,11 @@ const Haptics = (() => {
 })();
 
 /* ---------- state ---------- */
+/* DIY savings: hours you worked × what a shop would charge per hour.
+   Default: Ohio average independent-shop labor rate, $125/h (Tekmetric, June 2026). Editable in Settings. */
+const SHOP_RATE_DEFAULT = 125;
 const EMPTY = () => ({app: 'Garage', version: 1, updatedAt: null, vehicles: [], logs: [], schedule: [], services: [], projects: [], tireSets: [],
-  settings: {dueSoonMi: 500, dueSoonDays: 30}});
+  settings: {dueSoonMi: 500, dueSoonDays: 30, shopRate: SHOP_RATE_DEFAULT}});
 let DATA = EMPTY();
 let PHOTOS = {};            // vid -> dataURL (kept out of the JSON; synced as photos/<vid>.jpg)
 let SYNC = {token: '', owner: '', repo: '', branch: 'main', shas: {}, dirty: false, photoDirty: [], lastSync: null};
@@ -136,6 +139,7 @@ function normalizeData() {                 // returns true if anything changed (
   let changed = false;
   for (const p of DATA.projects) { const n = normPhase(p.phase); if (n !== p.phase) { p.phase = n; changed = true; } }
   if (!Array.isArray(DATA.tireSets)) DATA.tireSets = [];     // added in v1.8.0
+  if (DATA.settings && DATA.settings.shopRate == null) DATA.settings.shopRate = SHOP_RATE_DEFAULT;   // added in v1.9.0
   return changed;
 }
 
@@ -149,6 +153,17 @@ const setRotMi = t => (t.rotMi || 0) + (t.onCar && t.mountOdo != null ? Math.max
 const setTotalMi = t => (t.totalMi || 0) + (t.onCar && t.mountOdo != null ? Math.max(0, (currentOdo(t.vid) || 0) - t.mountOdo) : 0);
 const tireSched = vid => schedOf(vid).find(s => /tire\s*rotation/i.test(s.name)) || null;
 const latestTread = tire => { const r = (tire.treads || []).filter(x => x.d != null); return r.length ? r[r.length - 1] : null; };
+
+/* ---------- DIY labor ---------- */
+const isDIY = by => !by || by === 'DIY';
+const shopRate = () => num(DATA.settings.shopRate) ?? SHOP_RATE_DEFAULT;
+/** Jobs with hours logged: DIY service records (not ones made from a project; the project holds its hours) and projects. */
+function diyJobs(vid, inR = () => true) {
+  const out = [];
+  svcOf(vid).forEach(s => { if (s.hours > 0 && isDIY(s.doneBy) && !(s.projectId && DATA.projects.some(p => p.id === s.projectId)) && inR(s.date)) out.push({kind: 'svc', id: s.id, title: s.title, date: s.date, hours: s.hours}); });
+  projOf(vid).forEach(p => { if (p.hours > 0 && inR(p.doneAt || p.createdAt)) out.push({kind: 'proj', id: p.id, title: p.title, date: p.doneAt || p.createdAt, hours: p.hours, open: p.status !== 'Done'}); });
+  return out.map(j => Object.assign(j, {saved: j.hours * shopRate()}));
+}
 
 /* ---------- lookups ---------- */
 const V = id => DATA.vehicles.find(v => v.id === id);
@@ -283,7 +298,9 @@ function stats(vid, range) {
   const total = fuelSpend + mxSpend + projSpend;
   const firstD = [...fuel.map(l => l.date), ...svc.map(s => s.date)].filter(Boolean).sort()[0];
   const monthsSpan = from ? Math.max(1, daysBetween(from, today()) / 30.4) : (firstD ? Math.max(1, daysBetween(firstD, today()) / 30.4) : 1);
-  return {fuelSpend, mxSpend, projSpend, total, miles, avgMpg, prevAvg, mpg, gal, ppg, months, perMile: miles ? total / miles : null,
+  const diy = diyJobs(vid, d => !from || (d && d >= from));
+  const diyHours = diy.reduce((a, j) => a + j.hours, 0);
+  return {diy, diyHours, diySaved: diyHours * shopRate(), fuelSpend, mxSpend, projSpend, total, miles, avgMpg, prevAvg, mpg, gal, ppg, months, perMile: miles ? total / miles : null,
     fuelPerMile: miles ? fuelSpend / miles : null, mxPerMile: miles ? mxSpend / miles : null, projPerMile: miles ? projSpend / miles : null,
     milesPerMonth: miles ? miles / monthsSpan : null, fills: fuel.length};
 }
@@ -571,7 +588,7 @@ function buildSnapshot() {
     const sv = svcOf(v.id).sort(cmpDateDesc).slice(0, 12);
     if (sv.length) {
       L.push(``, `**Service history** (latest ${sv.length})`, ``);
-      sv.forEach(s => L.push(`- ${s.date ? fmtDate(s.date, true) : 'undated'} · ${s.odo != null ? fmtMi(s.odo) + ' mi' : '— mi'} · ${s.title}${svcCost(s) ? ' · ' + money(svcCost(s)) : ''}${s.doneBy ? ' · ' + s.doneBy : ''}${s.notes ? ' — ' + s.notes : ''}`));
+      sv.forEach(s => L.push(`- ${s.date ? fmtDate(s.date, true) : 'undated'} · ${s.odo != null ? fmtMi(s.odo) + ' mi' : '— mi'} · ${s.title}${svcCost(s) ? ' · ' + money(svcCost(s)) : ''}${s.doneBy ? ' · ' + s.doneBy : ''}${s.hours ? ' · ' + s.hours + ' h' : ''}${s.notes ? ' — ' + s.notes : ''}`));
     }
     const lg = logsOf(v.id).sort(cmpDateDesc).slice(0, 15);
     if (lg.length) {
@@ -590,12 +607,13 @@ function buildSnapshot() {
       open.forEach(p => {
         const parts = (p.parts || []).map(x => `${x.have ? '✓' : '○'} ${x.name}${x.cost ? ' ' + money(x.cost) : ''}`).join(', ');
         const tasks = (p.tasks || []).map(t => `${t.done ? '✓' : '○'} ${t.t}`).join(', ');
-        L.push(`- [${p.status}] ${p.title} — ${p.category || ''}${p.phase ? ' · ' + phaseLabel(p.phase) : ''}${p.priority && p.priority !== 'Normal' ? ' · ' + p.priority + ' priority' : ''}${p.notes ? ' — ' + p.notes : ''}${parts ? ' · parts: ' + parts : ''}${tasks ? ' · tasks: ' + tasks : ''}`);
+        L.push(`- [${p.status}] ${p.title} — ${p.category || ''}${p.phase ? ' · ' + phaseLabel(p.phase) : ''}${p.priority && p.priority !== 'Normal' ? ' · ' + p.priority + ' priority' : ''}${p.hours ? ' · ' + p.hours + ' h so far' : ''}${p.notes ? ' — ' + p.notes : ''}${parts ? ' · parts: ' + parts : ''}${tasks ? ' · tasks: ' + tasks : ''}`);
       });
     }
     const done = projOf(v.id).filter(p => p.status === 'Done');
-    if (done.length) { L.push(``, `**Completed projects**`, ``); done.forEach(p => L.push(`- ${p.title}${p.doneAt ? ' (' + fmtDate(p.doneAt, true) + ')' : ''}`)); }
+    if (done.length) { L.push(``, `**Completed projects**`, ``); done.forEach(p => L.push(`- ${p.title}${p.doneAt ? ' (' + fmtDate(p.doneAt, true) + ')' : ''}${p.hours ? ' · ' + p.hours + ' h' : ''}`)); }
     const st = stats(v.id, 'all');
+    if (st.diyHours) L.push(``, `**DIY labor**: ${st.diyHours} h across ${st.diy.length} jobs ≈ ${money(st.diySaved, 0)} saved at ${money(shopRate(), 0)}/h shop rate`);
     if (st.fills || st.total) L.push(``, `**Stats (since purchase)**: ${st.avgMpg ? st.avgMpg.toFixed(1) + ' avg mpg · ' : ''}${fmtMi(st.miles)} mi · spent ${money(st.total)} (fuel ${money(st.fuelSpend)}, MX ${money(st.mxSpend)}, projects ${money(st.projSpend)})${st.perMile ? ' · ' + money(st.perMile) + '/mi' : ''}`);
     L.push(``);
   }

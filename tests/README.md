@@ -23,7 +23,7 @@ The runner serves the app folder itself, so no server or network is needed. GitH
 | `update.test.js` | A new deploy shows up on the next open even inside GitHub Pages' 10-minute cache window, and the offline copy is the new version (serves the app the way Pages does, with the service worker on) |
 | `desktop.test.js` | Wide windows (≥ 1024 px): Fleet Overview columns and critical-only alert strip, opening a vehicle's Workbench, drag a project card to another phase or status, edit cards as a right-hand side panel, logging from the rail, every tab, the vehicle switcher, and the phone layout below 1024 px (upright iPad) with a live switch back |
 | `tires.test.js` | Tire sets: setup seeded from the rotation baseline, lettered tires, rotation patterns with tread, tread check, low-tread flags, miles accrued, seasonal swap with pre-rotated marks, schedule following the set on the car, swap reminder on Due and the badge, snapshot, inbox upserts, desktop MX |
-| `stats.test.js` | Prior-owner records left out of spend and miles, a finished project counted once, and the monthly spend chart showing consecutive months |
+| `stats.test.js` | Prior-owner records left out of spend and miles, a finished project counted once, the monthly spend chart showing consecutive months, and DIY labor savings (hours × shop rate, shop jobs and project MX records excluded, rate in Settings) |
 | `fonts.test.js` | Every input, select and textarea is at least 16px, so iOS never zooms on focus |
 
 ## Fixtures
