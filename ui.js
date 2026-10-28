@@ -693,7 +693,12 @@ function mpgChart(pts) {
     <polyline points="${line}" fill="none" stroke="#F0675C" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${dots}${lab(pts[0], L, 'start')}${lab(pts[pts.length - 1], W - R, 'end')}</svg>`;
 }
 function spendChart(months) {
-  const keys = Object.keys(months).sort().slice(-12);
+  const have = Object.keys(months).sort();
+  if (!have.length) return '<div class="empty">No dated spending in this range.</div>';
+  // consecutive months (empty ones included) up to this month, at most 12, starting no earlier than the first spending
+  const keys = []; const d = new Date(); d.setDate(1);
+  for (let i = 0; i < 12; i++) { const k = toISO(d).slice(0, 7); if (k < have[0]) break; keys.unshift(k); d.setMonth(d.getMonth() - 1); }
+  keys.forEach(k => { months[k] = months[k] || {fuel: 0, mx: 0, proj: 0}; });
   if (!keys.length) return '<div class="empty">No dated spending in this range.</div>';
   const W = 358, H = 180, B = 26, T = 18, gap = 8, n = keys.length, bw = Math.min(40, (W - gap * (n + 1)) / n);
   const max = Math.max(...keys.map(k => months[k].fuel + months[k].mx + months[k].proj)) || 1;

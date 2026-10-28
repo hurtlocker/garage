@@ -2,7 +2,7 @@
 /* ============================================================
    THE GARAGE — core: utils, storage, calculations, sync, snapshot
    ============================================================ */
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.8.1';
 
 /* ---------- utils ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -247,18 +247,21 @@ function rangeStart(r) {
   d.setDate(d.getDate() - map[r]); return toISO(d);
 }
 function stats(vid, range) {
-  const from = rangeStart(range), inR = d => d && (!from || d >= from);
+  const v = V(vid), from = rangeStart(range), inR = d => d && (!from || d >= from);
+  const owned = s => !v.purchaseDate || !s.date || s.date >= v.purchaseDate;      // prior-owner records are history, not your spending or driving
   const logs = logsOf(vid);
   const fuel = logs.filter(l => l.fuel && inR(l.date));
-  const svc = svcOf(vid).filter(s => inR(s.date));
+  const svc = svcOf(vid).filter(s => inR(s.date) && owned(s));
+  // a finished project's MX record repeats its parts cost, which is already counted from the project: count only its labor
+  const svcSpend = s => s.projectId && DATA.projects.some(p => p.id === s.projectId) ? (s.labor || 0) : svcCost(s);
   const parts = [];
   projOf(vid).forEach(p => (p.parts || []).forEach(pt => { if (pt.have && pt.cost && inR(pt.date)) parts.push({date: pt.date, cost: pt.cost}); }));
   const fuelSpend = fuel.reduce((a, l) => a + fuelCost(l.fuel), 0);
-  const mxSpend = svc.reduce((a, s) => a + svcCost(s), 0);
+  const mxSpend = svc.reduce((a, s) => a + svcSpend(s), 0);
   const projSpend = parts.reduce((a, p) => a + p.cost, 0);
-  const odoPts = logs.filter(l => l.odo != null && inR(l.date)).map(l => l.odo).concat(svcOf(vid).filter(s => s.odo != null && inR(s.date)).map(s => s.odo));
+  const odoPts = logs.filter(l => l.odo != null && inR(l.date)).map(l => l.odo).concat(svcOf(vid).filter(s => s.odo != null && inR(s.date) && owned(s)).map(s => s.odo));
   let miles = odoPts.length > 1 ? Math.max(...odoPts) - Math.min(...odoPts) : 0;
-  if (range === 'all') { const v = V(vid); const c = currentOdo(vid); if (v.purchaseMi && c) miles = c - v.purchaseMi; }
+  if (range === 'all') { const c = currentOdo(vid); if (v.purchaseMi && c) miles = c - v.purchaseMi; }
   const mpgAll = fuelSeries(vid);
   const mpg = mpgAll.filter(x => inR(x.date));
   const avgMpg = mpg.length ? mpg.reduce((a, x) => a + x.mpg, 0) / mpg.length : null;
@@ -273,9 +276,9 @@ function stats(vid, range) {
   }
   // monthly buckets
   const months = {};
-  const bump = (d, k, v) => { const m = monthKey(d); if (!m) return; months[m] = months[m] || {fuel: 0, mx: 0, proj: 0}; months[m][k] += v; };
+  const bump = (d, k, v) => { const m = monthKey(d); if (!m || !v) return; months[m] = months[m] || {fuel: 0, mx: 0, proj: 0}; months[m][k] += v; };
   fuel.forEach(l => bump(l.date, 'fuel', fuelCost(l.fuel)));
-  svc.forEach(s => bump(s.date, 'mx', svcCost(s)));
+  svc.forEach(s => bump(s.date, 'mx', svcSpend(s)));
   parts.forEach(p => bump(p.date, 'proj', p.cost));
   const total = fuelSpend + mxSpend + projSpend;
   const firstD = [...fuel.map(l => l.date), ...svc.map(s => s.date)].filter(Boolean).sort()[0];
