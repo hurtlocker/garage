@@ -696,12 +696,48 @@ function mpgChart(pts) {
     <line x1="${L}" y1="${Y(avg)}" x2="${W - R}" y2="${Y(avg)}" stroke="#7FA7BD" stroke-dasharray="4 4"/><text x="${L + 4}" y="${Y(avg) - 6}" text-anchor="start" fill="#7FA7BD" font-family="JetBrains Mono, monospace" font-size="10">avg ${avg.toFixed(1)}</text>
     <polyline points="${line}" fill="none" stroke="#F0675C" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${dots}${lab(pts[0], L, 'start')}${lab(pts[pts.length - 1], W - R, 'end')}</svg>`;
 }
+/** Consecutive months (empty ones included) up to this month, at most 12, starting no earlier than `first` (YYYY-MM). */
+function recentMonths(first) {
+  const keys = []; const d = new Date(); d.setDate(1);
+  for (let i = 0; i < 12; i++) { const k = toISO(d).slice(0, 7); if (k < first) break; keys.unshift(k); d.setMonth(d.getMonth() - 1); }
+  return keys;
+}
+/** Net spend: each month's spending stacked above zero, DIY labor saved below it, and a marker at the net. */
+function netChart(s) {
+  const firsts = [...Object.keys(s.months), ...Object.keys(s.diyMonths)].sort();
+  if (!firsts.length) return '';
+  const keys = recentMonths(firsts[0]); if (!keys.length) return '';
+  const up = k => { const m = s.months[k]; return m ? m.fuel + m.mx + m.proj : 0; }, dn = k => s.diyMonths[k] || 0;
+  const maxUp = Math.max(0, ...keys.map(up)), maxDn = Math.max(0, ...keys.map(dn));
+  if (!maxUp && !maxDn) return '';
+  const W = 358, H = 200, T = 16, B = 24, gap = 8, n = keys.length, bw = Math.min(34, (W - 40 - gap * (n + 1)) / n);
+  const span = (maxUp + maxDn) || 1, sc = v => v / span * (H - T - B), zero = T + sc(maxUp);
+  const startX = 40 + (W - 40 - (n * bw + (n - 1) * gap)) / 2;
+  const mono = 'font-family="JetBrains Mono, monospace" font-size="10"';
+  const bars = keys.map((k, i) => {
+    const m = s.months[k] || {fuel: 0, mx: 0, proj: 0}, x = startX + i * (bw + gap); let y = zero, out = '';
+    [['fuel', '#7FA7BD'], ['mx', '#E0A445'], ['proj', '#C2302B']].forEach(([f, c]) => { const h = sc(m[f]); if (h > 0) { y -= h; out += `<rect x="${x}" y="${y}" width="${bw}" height="${Math.max(1, h - 1)}" rx="2" fill="${c}"/>`; } });
+    const d = sc(dn(k)); if (d > 0) out += `<rect x="${x}" y="${zero + 1}" width="${bw}" height="${Math.max(1, d - 1)}" rx="2" fill="#9BC4A4"/>`;
+    const net = up(k) - dn(k);
+    if (up(k) && dn(k)) { const ny = zero - sc(net); out += `<line x1="${x - 3}" x2="${x + bw + 3}" y1="${ny}" y2="${ny}" stroke="#E8E4DE" stroke-width="2.5" stroke-linecap="round"/>`; }
+    return out + `<text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle" fill="${i === n - 1 ? '#E8E4DE' : '#A3AAAF'}" ${mono}>${MON[+k.slice(5) - 1]}</text>`;
+  }).join('');
+  const axis = `<line x1="36" y1="${zero}" x2="${W - 4}" y2="${zero}" stroke="#4A535A"/>` +
+    (maxUp ? `<text x="0" y="${T + 4}" fill="#A3AAAF" ${mono}>+${money(maxUp, 0).replace('$', '$')}</text>` : '') +
+    (maxDn ? `<text x="0" y="${H - B}" fill="#9BC4A4" ${mono}>−${money(maxDn, 0)}</text>` : '') + `<text x="0" y="${zero + 4}" fill="#A3AAAF" ${mono}>$0</text>`;
+  const spent = s.total, saved = s.diySaved, net = spent - saved;
+  return `<div class="lbl" style="margin-top:4px">Net spend by month</div>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Net spend by month: spending above the line, DIY labor saved below">${axis}${bars}</svg>
+    <div class="legend"><span><i style="background:#7FA7BD"></i>Fuel</span><span><i style="background:#E0A445"></i>MX</span><span><i style="background:#C2302B"></i>Projects</span><span><i style="background:#9BC4A4"></i>DIY saved</span><span><i style="background:#E8E4DE;height:3px"></i>Net</span></div>
+    <div class="g3" style="padding-top:8px;border-top:1px solid var(--line-lo)"><div><div class="lbl">Spent</div><div class="mono">${money(spent, 0)}</div></div>
+      <div><div class="lbl">DIY saved</div><div class="mono" style="color:#9BC4A4">−${money(saved, 0)}</div></div>
+      <div><div class="lbl">Net</div><div class="mono" style="font-weight:600">${net < 0 ? '−' : ''}${money(Math.abs(net), 0)}</div></div></div>
+    ${s.diy.some(j => !j.date) ? `<div class="help">${+s.diy.filter(j => !j.date).reduce((a, j) => a + j.hours, 0).toFixed(2)} h of undated jobs count in the totals but not the chart.</div>` : ''}`;
+}
 function spendChart(months) {
   const have = Object.keys(months).sort();
   if (!have.length) return '<div class="empty">No dated spending in this range.</div>';
-  // consecutive months (empty ones included) up to this month, at most 12, starting no earlier than the first spending
-  const keys = []; const d = new Date(); d.setDate(1);
-  for (let i = 0; i < 12; i++) { const k = toISO(d).slice(0, 7); if (k < have[0]) break; keys.unshift(k); d.setMonth(d.getMonth() - 1); }
+  const keys = recentMonths(have[0]);
   keys.forEach(k => { months[k] = months[k] || {fuel: 0, mx: 0, proj: 0}; });
   if (!keys.length) return '<div class="empty">No dated spending in this range.</div>';
   const W = 358, H = 180, B = 26, T = 18, gap = 8, n = keys.length, bw = Math.min(40, (W - gap * (n + 1)) / n);
@@ -748,7 +784,8 @@ function diyPanel(s) {
     ${jobs.length ? `<div style="display:flex;align-items:baseline;gap:12px"><span class="mono" style="font-size:28px;font-weight:600;color:var(--steel)">${money(s.diySaved, 0)}</span>
       <span class="muted" style="font-size:13px">${+s.diyHours.toFixed(2)} h · ${jobs.length} job${jobs.length === 1 ? '' : 's'}</span></div>
       ${jobs.slice(0, 5).map(j => `<button class="hbar" data-act="${j.kind === 'svc' ? 'editService' : 'editProject'}" data-id="${j.id}" style="text-align:left;width:100%"><span class="k" style="width:auto;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(j.title)}${j.open ? ' <span class="faint">(in progress)</span>' : ''}</span><span class="mono muted" style="font-size:12px">${j.hours} h</span><span class="v" style="width:64px">${money(j.saved, 0)}</span></button>`).join('')}`
-    : `<div class="help">Log hours on a DIY service record or a project and this shows what a shop would have charged for that labor.</div>`}</div>`;
+    : `<div class="help">Log hours on a DIY service record or a project and this shows what a shop would have charged for that labor.</div>`}
+    ${netChart(s)}</div>`;
 }
 const hoursHelp = (h, by) => num(h) > 0 && isDIY(by) ? `≈ ${money(num(h) * shopRate(), 0)} in shop labor saved at ${money(shopRate(), 0)}/h` : `Your time on it. DIY hours × ${money(shopRate(), 0)}/h shop rate = labor saved.`;
 

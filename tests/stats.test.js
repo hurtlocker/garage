@@ -39,6 +39,9 @@ module.exports = async ({browser, base, check}) => {
   await page.click('[data-act=saveProject]'); await page.waitForTimeout(250);
   check(await page.evaluate(() => DATA.projects.some(p => p.hours === 1.5)), 'project hours saved');
   check((await page.evaluate(() => buildSnapshot())).includes('**DIY labor**'), 'DIY labor in snapshot.md');
+  await page.goto(base + '#/v/v-roci/stats'); await page.waitForTimeout(250);
+  const net = await page.evaluate(() => { const svg = $('[aria-label="DIY labor saved"] svg'); return svg ? {down: [...svg.querySelectorAll('rect[fill="#9BC4A4"]')].length, up: [...svg.querySelectorAll('rect')].filter(r => r.getAttribute('fill') !== '#9BC4A4').length} : null; });
+  check(net && net.down >= 1 && net.up >= 1, 'net spend chart: spending above the line, DIY savings below');
   check(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.join('; ') : ''));
   await page.context().close();
 };

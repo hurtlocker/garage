@@ -2,7 +2,7 @@
 /* ============================================================
    THE GARAGE — core: utils, storage, calculations, sync, snapshot
    ============================================================ */
-const APP_VERSION = '1.9.0';
+const APP_VERSION = '1.9.1';
 
 /* ---------- utils ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -300,7 +300,9 @@ function stats(vid, range) {
   const monthsSpan = from ? Math.max(1, daysBetween(from, today()) / 30.4) : (firstD ? Math.max(1, daysBetween(firstD, today()) / 30.4) : 1);
   const diy = diyJobs(vid, d => !from || (d && d >= from));
   const diyHours = diy.reduce((a, j) => a + j.hours, 0);
-  return {diy, diyHours, diySaved: diyHours * shopRate(), fuelSpend, mxSpend, projSpend, total, miles, avgMpg, prevAvg, mpg, gal, ppg, months, perMile: miles ? total / miles : null,
+  const diyMonths = {};
+  diy.forEach(j => { const m = monthKey(j.date); if (m && j.saved) diyMonths[m] = (diyMonths[m] || 0) + j.saved; });
+  return {diy, diyHours, diyMonths, diySaved: diyHours * shopRate(), fuelSpend, mxSpend, projSpend, total, miles, avgMpg, prevAvg, mpg, gal, ppg, months, perMile: miles ? total / miles : null,
     fuelPerMile: miles ? fuelSpend / miles : null, mxPerMile: miles ? mxSpend / miles : null, projPerMile: miles ? projSpend / miles : null,
     milesPerMonth: miles ? miles / monthsSpan : null, fills: fuel.length};
 }
