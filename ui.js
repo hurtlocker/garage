@@ -286,9 +286,9 @@ function saveEditEntry(id) {
    MX
    ============================================================ */
 function renderMx(vid) {
-  const seg = `<div class="seg" role="tablist" aria-label="Maintenance views" style="grid-template-columns:repeat(3,minmax(0,1fr))">
-    ${[['due', 'Due'], ['history', 'History'], ['specs', 'Specs & Docs']].map(([k, l]) => `<button role="tab" aria-selected="${UI.mxView === k}" class="${UI.mxView === k ? 'on' : ''}" data-act="mxView" data-k="${k}">${l}</button>`).join('')}</div>`;
-  return seg + ({due: mxDue, history: mxHistory, specs: mxSpecs}[UI.mxView])(vid);
+  const seg = `<div class="seg" role="tablist" aria-label="Maintenance views" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+    ${[['due', 'Due'], ['history', 'History'], ['tires', 'Tires'], ['specs', 'Specs']].map(([k, l]) => `<button role="tab" aria-selected="${UI.mxView === k}" class="${UI.mxView === k ? 'on' : ''}" data-act="mxView" data-k="${k}">${l}</button>`).join('')}</div>`;
+  return seg + ({due: mxDue, history: mxHistory, tires: mxTires, specs: mxSpecs}[UI.mxView] || mxDue)(vid);
 }
 function dueCard(it, st) {
   const label = {overdue: 'OVERDUE', soon: 'DUE SOON', ok: 'OK', none: 'NO HISTORY'}[st.state];
@@ -304,18 +304,19 @@ function mxDue(vid) {
   const m = mxSummary(vid), v = V(vid);
   const order = {overdue: 0, soon: 1, ok: 2, none: 3};
   const items = [...m.items].sort((a, b) => order[a.st.state] - order[b.st.state] || (a.st.miLeft ?? 1e9) - (b.st.miLeft ?? 1e9));
-  const docCards = m.docs.filter(d => d.state !== 'ok').map(d => `<button class="due ${d.state === 'overdue' ? 'overdue' : 'soon'}" data-act="editDocs" data-vid="${vid}">
-    <div class="top"><span class="stat ${d.state}">${d.state === 'overdue' ? 'EXPIRED' : 'DUE SOON'}</span><span class="mono muted" style="font-size:12px">${d.daysLeft < 0 ? -d.daysLeft + 'd ago' : 'in ' + d.daysLeft + 'd'}</span></div>
+  const docCards = m.docs.filter(d => d.state !== 'ok').map(d => `<button class="due ${d.state === 'overdue' ? 'overdue' : 'soon'}" ${d.kind === 'swap' ? `data-act="tireSwap" data-vid="${vid}" data-in="${d.setId}"` : `data-act="editDocs" data-vid="${vid}"`}>
+    <div class="top"><span class="stat ${d.state}">${d.kind === 'swap' ? (d.state === 'overdue' ? 'SWAP DUE' : 'SWAP SOON') : d.state === 'overdue' ? 'EXPIRED' : 'DUE SOON'}</span><span class="mono muted" style="font-size:12px">${d.daysLeft < 0 ? -d.daysLeft + 'd ago' : 'in ' + d.daysLeft + 'd'}</span></div>
     <div class="nm">${esc(d.name)}</div><div class="src">${fmtDate(d.date, true)}</div></button>`);
   const active = items.filter(x => x.st.state !== 'none'), none = items.filter(x => x.st.state === 'none');
+  const tsc = tireSched(vid), card = x => x.it === tsc && setOnCar(vid) ? tireDueCard(x.it, x.st) : dueCard(x.it, x.st);
   return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 class="h2">Due</h2>
       <div style="display:flex;gap:8px"><button class="btn2 sm" data-act="addSched" data-vid="${vid}">+ Item</button><button class="btn2 sm" data-act="addService" data-vid="${vid}">+ Log service</button></div></div>
     ${docCards.join('')}
-    ${active.length ? active.map(x => dueCard(x.it, x.st)).join('') : (none.length ? '' : '<div class="empty">No schedule yet. Add items with intervals to track what\'s due.</div>')}
+    ${active.length ? active.map(card).join('') : (none.length ? '' : '<div class="empty">No schedule yet. Add items with intervals to track what\'s due.</div>')}
     ${none.length ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><div class="lbl">Needs baseline · ${none.length}</div>
       ${v.purchaseMi ? `<button class="btn2 sm" data-act="baselineAll" data-vid="${vid}">Start all at purchase</button>` : ''}</div>
       <div class="help">No record of when these were last done. Tap one to enter it, or start counting from purchase (${fmtMi(v.purchaseMi)} mi) if you don't know.</div>
-      ${none.map(x => dueCard(x.it, x.st)).join('')}` : ''}`;
+      ${none.map(card).join('')}` : ''}`;
 }
 function mxHistory(vid) {
   const s = svcOf(vid).sort(cmpDateDesc);

@@ -5,8 +5,8 @@
    a 10-minute-old copy. Every app-file request here therefore revalidates with the server
    (cache: 'no-cache' → a tiny 304 when nothing changed) and the install precache bypasses the
    HTTP cache entirely (cache: 'reload'). Offline, the last good copy is served. */
-const CACHE = 'garage-v14';
-const ASSETS = ['./', './index.html', './styles.css', './core.js', './ui.js', './desktop.js', './manifest.json',
+const CACHE = 'garage-v15';
+const ASSETS = ['./', './index.html', './styles.css', './core.js', './ui.js', './tires.js', './desktop.js', './manifest.json',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {

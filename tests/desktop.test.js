@@ -16,7 +16,7 @@ module.exports = async ({browser, base, check}) => {
   check(await page.locator('.d-vcol >> nth=1').locator('[data-act=editVehicle]:has-text("Add VIN")').count() === 1, 'a vehicle with no VIN offers “Add VIN”');
   const alerts = await page.$$eval('.d-alert', as => as.map(a => a.textContent.replace(/\s+/g, ' ').trim()));
   check(alerts.some(a => a.includes('WATCH') && a.includes('Fix fuel pump leak')), 'watch item in the alert strip');
-  check(alerts.every(a => /WATCH|OVERDUE|EXPIRED/.test(a)), 'alert strip holds critical alerts only');
+  check(alerts.every(a => /WATCH|OVERDUE|EXPIRED|SWAP DUE/.test(a)), 'alert strip holds critical alerts only');
   check(await page.locator('.d-feed').count() === 1 && await page.locator('.d-stack').count() === 3, 'fleet activity feed and spend bars');
   await shot(page, 'desktop-01-fleet');
 

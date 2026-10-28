@@ -44,7 +44,8 @@ function fleetAlerts(vs) {
     projOf(v.id).filter(p => p.watch && p.status !== 'Done').forEach(p => out.push({lv: 'watch', label: 'WATCH', v, t: p.title, s: p.notes, act: `data-act="editProject" data-id="${p.id}"`}));
     const m = mxSummary(v.id);
     m.items.filter(x => x.st.state === 'overdue').forEach(x => out.push({lv: 'overdue', label: 'OVERDUE', v, t: x.it.name, s: dueText(x.st, x.it), act: `data-act="goMx" data-vid="${v.id}"`}));
-    m.docs.filter(d => d.state === 'overdue').forEach(d => out.push({lv: 'overdue', label: 'EXPIRED', v, t: d.name, s: fmtDate(d.date, true), act: `data-act="editDocs" data-vid="${v.id}"`}));
+    m.docs.filter(d => d.state === 'overdue').forEach(d => out.push({lv: 'overdue', label: d.kind === 'swap' ? 'SWAP DUE' : 'EXPIRED', v, t: d.name, s: fmtDate(d.date, true),
+      act: d.kind === 'swap' ? `data-act="tireSwap" data-vid="${v.id}" data-in="${d.setId}"` : `data-act="editDocs" data-vid="${v.id}"`}));
   });
   return out;
 }
@@ -204,7 +205,7 @@ function wireBoard() {
 }
 
 /* ---------- MX, Log, Specs: the phone views side by side ---------- */
-const deskMx = vid => `<div class="d-grid2"><div class="d-cstack">${mxDue(vid)}</div><div class="d-cstack">${mxHistory(vid)}</div></div>`;
+const deskMx = vid => `<div class="d-grid2"><div class="d-cstack">${mxDue(vid)}</div><div class="d-cstack">${mxTires(vid)}${mxHistory(vid)}</div></div>`;
 function deskLog(vid) {
   const all = logsOf(vid).sort(cmpDateDesc);
   return `<div class="d-ph"><h2 class="h2">Log · ${all.length} entr${all.length === 1 ? 'y' : 'ies'}</h2><span class="help">New entries go in the form on the left.</span></div>

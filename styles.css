@@ -361,3 +361,39 @@ body.wide .sheet .grab{display:none}
 .sheet-x{width:40px;height:40px;flex:none;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--ink-dim);background:var(--raised)}
 .sheet-x:hover{color:var(--ink)}
 body.wide .toast{bottom:28px}
+
+/* ============================================================
+   TIRE SETS (tires.js)
+   ============================================================ */
+.tset{gap:12px}
+.tset.on{border-color:var(--red-edge)}
+.tset-h{display:flex;flex-direction:column;gap:4px;text-align:left;width:100%}
+.tset-h .nm{font-size:16px;font-weight:600}
+.stat.oncar{background:var(--red);color:#fff}
+.tdiag{position:relative;width:132px;height:196px;flex:none}
+.tdiag .tbody{position:absolute;left:22px;top:6px;width:88px;height:184px;border-radius:30px 30px 18px 18px;background:var(--bg);border:1.5px solid var(--line)}
+.tdiag .tfront{position:absolute;left:0;right:0;top:90px;text-align:center;font-family:var(--cond);font-weight:600;font-size:10px;letter-spacing:.14em;color:var(--ink-dim)}
+.tire{position:absolute;width:36px;height:60px;border-radius:8px;background:var(--raised);border:1.5px solid var(--line-hi);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:left .3s,top .3s}
+.tire b{font-family:var(--mono);font-size:15px}
+.tire span{font-family:var(--cond);font-size:10px;letter-spacing:.04em;color:var(--ink-dim);white-space:nowrap}
+.tire.p-LF{left:4px;top:24px} .tire.p-RF{left:92px;top:24px} .tire.p-LR{left:4px;top:116px} .tire.p-RR{left:92px;top:116px}
+.tire.good{border-color:var(--steel)} .tire.low{border-color:var(--amber)} .tire.low span{color:var(--amber)}
+.tire.worn{border-color:var(--red-hi);background:var(--red-bg)} .tire.worn span{color:var(--red-ink)}
+.tafter .tire span{color:var(--red-ink)}
+.tmoves{background:var(--bg);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.tmoves .mono,.tmovelist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px;font-size:13px;white-space:pre}
+.tafter{display:flex;gap:14px;align-items:center;background:var(--bg);border-radius:12px;padding:12px}
+.tafter .tmovelist{grid-template-columns:1fr}
+.tmark{font-family:var(--mono);font-size:12px;border:1px solid var(--line-hi);border-radius:6px;padding:4px 8px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.check[aria-checked=true] .box{background:var(--red);border-color:var(--red)}
+.check[aria-checked=true] .box::after{content:"";width:5px;height:10px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.tblk{background:var(--bg);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.tmk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.tmk>div{border:1px solid var(--line-hi);border-radius:8px;padding:8px 4px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.tmk b{font-family:var(--mono);font-size:14px}
+.tmk span{font-size:11px;color:var(--ink-dim)}
+.tmk em{font-style:normal;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--red-ink)}
+.tmk em.same{color:var(--ink-2)}
+.due[data-tire-due] .nm{font-size:16px;font-weight:600}
+.tset .btn-red-sm,.due[data-tire-due] .btn-red-sm{padding:0 8px;white-space:nowrap;font-size:15px}

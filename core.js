@@ -2,7 +2,7 @@
 /* ============================================================
    THE GARAGE — core: utils, storage, calculations, sync, snapshot
    ============================================================ */
-const APP_VERSION = '1.7.1';
+const APP_VERSION = '1.8.0';
 
 /* ---------- utils ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -70,7 +70,7 @@ const Haptics = (() => {
 })();
 
 /* ---------- state ---------- */
-const EMPTY = () => ({app: 'Garage', version: 1, updatedAt: null, vehicles: [], logs: [], schedule: [], services: [], projects: [],
+const EMPTY = () => ({app: 'Garage', version: 1, updatedAt: null, vehicles: [], logs: [], schedule: [], services: [], projects: [], tireSets: [],
   settings: {dueSoonMi: 500, dueSoonDays: 30}});
 let DATA = EMPTY();
 let PHOTOS = {};            // vid -> dataURL (kept out of the JSON; synced as photos/<vid>.jpg)
@@ -135,8 +135,20 @@ const phaseLabel = n => n ? `Phase ${n}` : 'No phase';
 function normalizeData() {                 // returns true if anything changed (older data stored free-text phases)
   let changed = false;
   for (const p of DATA.projects) { const n = normPhase(p.phase); if (n !== p.phase) { p.phase = n; changed = true; } }
+  if (!Array.isArray(DATA.tireSets)) DATA.tireSets = [];     // added in v1.8.0
   return changed;
 }
+
+/* ---------- tire sets ----------
+   A set's rotation miles = miles banked while it was on the car before + miles since it went on (if it's on now).
+   The vehicle's "Tire rotation" schedule item is kept in step with whichever set is on the car. */
+const TIRE_POS = ['LF', 'RF', 'LR', 'RR'];
+const tireSetsOf = vid => (DATA.tireSets || []).filter(t => t.vid === vid);
+const setOnCar = vid => tireSetsOf(vid).find(t => t.onCar) || null;
+const setRotMi = t => (t.rotMi || 0) + (t.onCar && t.mountOdo != null ? Math.max(0, (currentOdo(t.vid) || 0) - t.mountOdo) : 0);
+const setTotalMi = t => (t.totalMi || 0) + (t.onCar && t.mountOdo != null ? Math.max(0, (currentOdo(t.vid) || 0) - t.mountOdo) : 0);
+const tireSched = vid => schedOf(vid).find(s => /tire\s*rotation/i.test(s.name)) || null;
+const latestTread = tire => { const r = (tire.treads || []).filter(x => x.d != null); return r.length ? r[r.length - 1] : null; };
 
 /* ---------- lookups ---------- */
 const V = id => DATA.vehicles.find(v => v.id === id);
@@ -183,6 +195,10 @@ function docItems(v) {
     if (!date) return;
     const days = daysBetween(today(), date);
     out.push({name: n, date, daysLeft: days, state: days < 0 ? 'overdue' : days <= DATA.settings.dueSoonDays ? 'soon' : 'ok'});
+  });
+  tireSetsOf(v.id).filter(t => !t.onCar && t.swapBy).forEach(t => {        // seasonal swap reminder you set on a stored set
+    const days = daysBetween(today(), t.swapBy);
+    out.push({name: `Seasonal swap · to ${t.name}`, date: t.swapBy, daysLeft: days, kind: 'swap', setId: t.id, state: days < 0 ? 'overdue' : days <= DATA.settings.dueSoonDays ? 'soon' : 'ok'});
   });
   return out;
 }
@@ -453,7 +469,7 @@ const Cloud = (() => {
 let LAST_INBOX = 0;
 
 /* ---------- inbox patch ops ---------- */
-const PATCH_COLLS = ['logs', 'schedule', 'services', 'projects'];
+const PATCH_COLLS = ['logs', 'schedule', 'services', 'projects', 'tireSets'];
 const VEHICLE_FIELDS = ['nickname', 'year', 'make', 'model', 'trim', 'body', 'transmission', 'plate', 'vin', 'status', 'purchaseDate', 'purchaseMi', 'order'];
 function applyPatch(p) {
   let ok = 0; const skipped = [];
@@ -540,6 +556,14 @@ function buildSnapshot() {
     if (m.items.length) {
       L.push(``, `**Maintenance schedule**`, ``, `| Item | Interval | Last done | Status |`, `|---|---|---|---|`);
       m.items.forEach(({it, st}) => L.push(`| ${it.name} | ${intervalText(it).replace('every ', '')} | ${it.lastMi != null ? fmtMi(it.lastMi) + ' mi' : ''}${it.lastDate ? ' ' + fmtDate(it.lastDate, true) : ''}${it.lastMi == null && !it.lastDate ? 'unknown' : ''} | ${st.state === 'none' ? 'needs baseline' : st.state + ' — ' + dueText(st, it)} |`));
+    }
+    const ts = tireSetsOf(v.id);
+    if (ts.length) {
+      L.push(``, `**Tire sets**`, ``);
+      ts.forEach(t => L.push(`- ${t.name}${t.onCar ? ' (ON CAR)' : ' (stored' + (t.storage ? ' · ' + t.storage : '') + ')'} — ${[t.size, t.brand, t.dot && 'DOT ' + t.dot, t.directional ? 'directional' : 'non-directional'].filter(Boolean).join(' · ')}` +
+        ` · ${fmtMi(setRotMi(t))} mi since rotation · ${fmtMi(setTotalMi(t))} mi logged on set` +
+        ` · ${(t.tires || []).map(x => { const r = latestTread(x); return `${x.l} ${x.pos}${r ? ' ' + r.d + '/32' : ''}`; }).join(', ')}` +
+        (t.swapBy && !t.onCar ? ` · swap reminder ${fmtDate(t.swapBy, true)}` : '') + (t.notes ? ` — ${t.notes}` : '')));
     }
     const sv = svcOf(v.id).sort(cmpDateDesc).slice(0, 12);
     if (sv.length) {
