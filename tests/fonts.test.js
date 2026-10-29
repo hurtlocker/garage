@@ -26,6 +26,7 @@ module.exports = async ({browser, base, check}) => {
   await page.click('.pcard >> text=Fix sloppy shifter'); await page.click('[data-act=pAddTask]'); await scan('project');
   check(n > 60, `${n} form controls checked`);
   check(!bad.length, 'all form controls are 16px or larger' + (bad.length ? ': ' + bad.join(', ') : ''));
+  check(await page.$$eval('link[rel=apple-touch-icon]', ls => ls.length > 0 && ls.every(l => l.href.startsWith('data:image/png'))), 'home-screen icon is embedded in the page (iOS shows a letter tile otherwise)');
   check(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.join('; ') : ''));
   await page.context().close();
 };
