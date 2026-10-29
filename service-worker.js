@@ -5,7 +5,7 @@
    a 10-minute-old copy. Every app-file request here therefore revalidates with the server
    (cache: 'no-cache' → a tiny 304 when nothing changed) and the install precache bypasses the
    HTTP cache entirely (cache: 'reload'). Offline, the last good copy is served. */
-const CACHE = 'garage-v20';
+const CACHE = 'garage-v21';
 const ASSETS = ['./', './index.html', './styles.css', './core.js', './ui.js', './tires.js', './desktop.js', './manifest.json',
   './icons/icon-180.png', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -30,6 +30,7 @@ self.addEventListener('fetch', e => {
     return;
   }
   if (url.origin !== location.origin) return;
+  if (url.pathname.includes('/icons/')) return;          // icons: always straight from the network (iOS reads the home-screen icon once, at install)
   const key = req.mode === 'navigate' ? './index.html' : req;
   e.respondWith(fetch(url.href, {cache: 'no-cache', credentials: 'same-origin'}).then(res => {
     if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(key, copy)); }
