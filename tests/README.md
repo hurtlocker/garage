@@ -25,6 +25,7 @@ The runner serves the app folder itself, so no server or network is needed. GitH
 | `tires.test.js` | Tire sets: setup seeded from the rotation baseline, lettered tires, rotation patterns with tread, tread check, low-tread flags, miles accrued, seasonal swap with pre-rotated marks, schedule following the set on the car, swap reminder on Due and the badge, snapshot, inbox upserts, desktop MX |
 | `stats.test.js` | Prior-owner records left out of spend and miles, a finished project counted once, the monthly spend chart showing consecutive months, and DIY labor savings (hours × shop rate, shop jobs and project MX records excluded, rate in Settings) |
 | `crop.test.js` | Hero photo crop: dialog on pick, 2:1 frame, drag and zoom, photo always covers the frame, 1280×640 result, original kept for re-adjusting, Escape cancels without side effects |
+| `notes.test.js` | Long notes: no sideways overflow, clamped on project cards and the watch alert, links under the notes field |
 | `fonts.test.js` | Every input, select and textarea is at least 16px, so iOS never zooms on focus |
 
 ## Fixtures

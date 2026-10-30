@@ -415,3 +415,12 @@ body.wide .toast{bottom:28px}
 .cropper .btn-red-sm{white-space:nowrap;padding:0 6px;font-size:15px;letter-spacing:.06em}
 .crop-inner>.g3{grid-template-columns:1fr 1fr 1.35fr}
 .crop-frame::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:10px;box-shadow:inset 0 0 0 2px var(--red)}
+
+/* long notes: wrap long words/URLs inside their card, cap how much shows on cards and alerts */
+.pcard .n,.alert .a-s,.entry .n,.due .src,.kvrow .v{overflow-wrap:anywhere}
+.alert>div{min-width:0}
+.pcard .n{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.alert .a-s{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.note-links{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.note-links a{display:flex;align-items:center;min-height:36px;padding:0 12px;border:1px solid var(--line-hi);border-radius:8px;font-size:14px;text-decoration:none;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

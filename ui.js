@@ -506,7 +506,7 @@ function editProject(id, vid) {
     <div class="field"><label class="lbl" for="jHours">Hours worked</label><input id="jHours" class="fld" inputmode="decimal" value="${p.hours ?? ''}" placeholder="0.0">
       <div class="help" id="jSaveHelp">${hoursHelp(p.hours)}</div></div>
     <div class="switchrow"><div>Watch item<span class="s">Shows on the Log page until done; notes can attach to it</span></div><button class="switch" role="switch" id="jWatch" aria-checked="${!!p.watch}" aria-label="Watch item" data-act="flip"></button></div>
-    <div class="field"><label class="lbl" for="jNotes">Notes</label><textarea id="jNotes" class="fld">${esc(p.notes)}</textarea></div>
+    <div class="field"><label class="lbl" for="jNotes">Notes</label><textarea id="jNotes" class="fld">${esc(p.notes)}</textarea>${noteLinks(p.notes)}</div>
     <div class="lbl">Parts</div><div id="jParts" style="display:flex;flex-direction:column;gap:8px"></div>
     <button class="ghost-add" data-act="pAddPart">${IC.plus} Add part</button>
     <div class="lbl">Tasks</div><div id="jTasks" style="display:flex;flex-direction:column;gap:6px"></div>
@@ -515,6 +515,13 @@ function editProject(id, vid) {
     <button class="btn" data-act="saveProject" data-id="${id || ''}">SAVE</button>
     ${id && p.status !== 'Done' ? `<button class="btn2" data-act="finishProject" data-id="${id}">Mark done…</button>` : ''}
     ${id ? `<button class="btn2 danger" data-act="delProject" data-id="${id}">Delete project</button>` : ''}`, () => paintPDraft());
+}
+/** Web addresses in a note, as tappable links (notes themselves stay plain text). */
+function noteLinks(text) {
+  const urls = [...new Set(String(text || '').match(/https?:\/\/[^\s<>"')\]]+/g) || [])];
+  if (!urls.length) return '';
+  const label = u => { try { const x = new URL(u); return x.hostname.replace(/^www\./, '') + (x.pathname.length > 1 ? x.pathname.replace(/\/$/, '').slice(0, 28) + (x.pathname.length > 29 ? '…' : '') : ''); } catch (e) { return u; } };
+  return `<div class="note-links">${urls.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(label(u))} ↗</a>`).join('')}</div>`;
 }
 function projectNotes(id) {
   const l = DATA.logs.filter(x => x.projectId === id).sort(cmpDateDesc);
